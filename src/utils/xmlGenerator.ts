@@ -91,6 +91,37 @@ interface DeliveryRequest {
     price?: number;
 }
 
+// Helper to normalize province to 2-letter code
+function normalizeProvince(prov: string | undefined): string {
+    if (!prov) return '';
+    const p = prov.trim().toUpperCase();
+
+    const mapping: Record<string, string> = {
+        'ALBERTA': 'AB',
+        'BRITISH COLUMBIA': 'BC',
+        'MANITOBA': 'MB',
+        'NEW BRUNSWICK': 'NB',
+        'NEWFOUNDLAND': 'NL',
+        'NEWFOUNDLAND AND LABRADOR': 'NL',
+        'NOVA SCOTIA': 'NS',
+        'ONTARIO': 'ON',
+        'PRINCE EDWARD ISLAND': 'PE',
+        'QUEBEC': 'QC',
+        'QUÉBEC': 'QC',
+        'SASKATCHEWAN': 'SK',
+        'NORTHWEST TERRITORIES': 'NT',
+        'NUNAVUT': 'NU',
+        'YUKON': 'YT',
+        'YUKON TERRITORY': 'YT'
+    };
+
+    // If it's already 2 chars, return it (e.g. QC, ON)
+    if (p.length === 2) return p;
+
+    // Return mapped code or original if not found
+    return mapping[p] || p;
+}
+
 function generateDeliveryRequest(request: DeliveryRequest, settings: GeneratorSettings, indent: string = '  '): string {
     let xml = `${indent}<delivery-request>\n`;
     xml += `${indent}  <delivery-spec>\n`;
@@ -105,7 +136,7 @@ function generateDeliveryRequest(request: DeliveryRequest, settings: GeneratorSe
     xml += `${indent}        <address-line-1>${escapeXml(request.addressLine1)}</address-line-1>\n`;
     xml += `${indent}        <address-line-2>${escapeXml(request.addressLine2)}</address-line-2>\n`;
     xml += `${indent}        <city>${escapeXml(request.city)}</city>\n`;
-    xml += `${indent}        <prov-state>${escapeXml(request.province)}</prov-state>\n`;
+    xml += `${indent}        <prov-state>${escapeXml(normalizeProvince(request.province))}</prov-state>\n`;
     xml += `${indent}        <postal-zip-code>${escapeXml(request.postalCode)}</postal-zip-code>\n`;
     xml += `${indent}        <country-code>${escapeXml(request.countryCode)}</country-code>\n`;
     xml += `${indent}        <client-voice-number>${escapeXml(request.phone)}</client-voice-number>\n`;
