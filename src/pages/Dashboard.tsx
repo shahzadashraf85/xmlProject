@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { parseExcelFile, parseExcelFileWithAI, validateAllRows } from '../utils/excelParser';
+import { applyMapping, REQUIRED_FIELDS } from '../utils/aiMapper';
 import { generateXML, downloadXML, normalizeServiceCode } from '../utils/xmlGenerator';
 import { supabase } from '../lib/supabase';
 import type { OrderRow, ValidationError, GeneratorSettings } from '../types';
@@ -21,6 +22,12 @@ export default function Dashboard() {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [useAI, setUseAI] = useState(false);
     const [aiMapping, setAiMapping] = useState<Record<string, string> | null>(null);
+
+    // Manual Mapping State
+    const [rawRows, setRawRows] = useState<any[]>([]);
+    const [rawHeaders, setRawHeaders] = useState<string[]>([]);
+    const [manualMapping, setManualMapping] = useState<Record<string, string>>({});
+    const [showMapping, setShowMapping] = useState(false);
 
     async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
         const selectedFile = e.target.files?.[0];
@@ -48,9 +55,26 @@ export default function Dashboard() {
                 result = await parseExcelFile(selectedFile);
             }
 
-            const { rows, headers: parsedHeaders, errors } = result;
+
+            const { rows, headers: parsedHeaders, errors, rawRows: rRows, rawHeaders: rHeaders, aiMapping: aiMap } = result;
             setParsedRows(rows);
             setHeaders(parsedHeaders);
+
+            // Save raw data for manual re-mapping
+            setRawRows(rRows || []);
+            setRawHeaders(rHeaders || []);
+
+            // Initialize Manual Mapping state (Target -> Source)
+            const initialMapping: Record<string, string> = {};
+            if (aiMap) {
+                Object.entries(aiMap).forEach(([source, target]) => {
+                    if (target && target !== 'null') {
+                        initialMapping[target] = source;
+                    }
+                });
+            }
+            setManualMapping(initialMapping);
+            setShowMapping(true);
 
             if (errors.length > 0) {
                 setValidationErrors(errors);
@@ -65,6 +89,43 @@ export default function Dashboard() {
             setMessage({ type: 'error', text: error.message || 'Failed to parse file' });
         } finally {
             setLoading(false);
+        }
+    }
+
+    function handleMappingChange(targetField: string, sourceHeader: string) {
+        const newMapping = { ...manualMapping };
+
+        if (sourceHeader === '') {
+            delete newMapping[targetField];
+        } else {
+            newMapping[targetField] = sourceHeader;
+        }
+
+        setManualMapping(newMapping);
+        reapplyMapping(newMapping);
+    }
+
+    function reapplyMapping(currentMap: Record<string, string>) {
+        if (rawRows.length === 0) return;
+
+        // Invert mapping for applyMapping utility (Source -> Target)
+        const forwardMapping: Record<string, string> = {};
+        Object.entries(currentMap).forEach(([target, source]) => {
+            forwardMapping[source] = target;
+        });
+
+        // Re-map all rows
+        const newParsedRows = rawRows.map(row => applyMapping(row, forwardMapping));
+
+        setParsedRows(newParsedRows);
+
+        // Re-validate immediately
+        const errors = validateAllRows(newParsedRows);
+        if (errors.length > 0) {
+            setValidationErrors(errors);
+            // Don't show error message toast here, can be annoying while editing
+        } else {
+            setValidationErrors([]);
         }
     }
 
@@ -270,6 +331,49 @@ export default function Dashboard() {
                         </div>
                     )}
                 </div>
+
+                {/* Manual Mapping Section */}
+                {showMapping && rawHeaders.length > 0 && (
+                    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-semibold">Column Mapping</h2>
+                            <button
+                                onClick={() => setShowMapping(false)}
+                                className="text-sm text-gray-500 hover:text-gray-700"
+                            >
+                                Hide
+                            </button>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Review and adjust how your Excel columns map to the required shipping fields.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Object.entries(REQUIRED_FIELDS).map(([fieldKey, fieldDesc]) => {
+                                const isRequired = fieldDesc.toLowerCase().includes('(required)');
+                                return (
+                                    <div key={fieldKey} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            {fieldKey} {isRequired && <span className="text-red-500">*</span>}
+                                        </label>
+                                        <select
+                                            value={manualMapping[fieldKey] || ''}
+                                            onChange={(e) => handleMappingChange(fieldKey, e.target.value)}
+                                            className="block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        >
+                                            <option value="">-- Unmapped --</option>
+                                            {rawHeaders.map((header) => (
+                                                <option key={header} value={header}>
+                                                    {header}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* Settings Panel */}
                 {parsedRows.length > 0 && (

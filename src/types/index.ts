@@ -31,6 +31,8 @@ export interface ParsedData {
     headers: string[];
     errors: ValidationError[];
     aiMapping?: Record<string, string>;
+    rawRows?: any[];
+    rawHeaders?: string[];
 }
 
 export interface GeneratorSettings {

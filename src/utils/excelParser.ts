@@ -73,7 +73,7 @@ export function parseExcelFile(file: File): Promise<ParsedData> {
 
                 const headers = Array.from(new Set(headerMap.values()));
 
-                resolve({ rows, headers, errors: [] });
+                resolve({ rows, headers, errors: [], rawRows: rawData, rawHeaders });
             } catch (error) {
                 reject(error);
             }
@@ -115,7 +115,7 @@ export async function parseExcelFileWithAI(file: File, geminiApiKey: string): Pr
                 const mappedHeaders = Object.values(aiMapping).filter(v => v && v !== 'null');
                 const headers = Array.from(new Set(mappedHeaders)) as string[];
 
-                resolve({ rows, headers, errors: [], aiMapping });
+                resolve({ rows, headers, errors: [], aiMapping, rawRows: rawData, rawHeaders });
             } catch (error: any) {
                 reject(new Error(`AI mapping failed: ${error.message}`));
             }

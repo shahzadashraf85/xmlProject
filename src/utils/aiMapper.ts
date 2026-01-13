@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const REQUIRED_FIELDS = {
-    ContactName: 'Recipient name (required) - Map BOTH "First Name" and "Last Name" columns to this field',
+export const REQUIRED_FIELDS = {
+    ContactName: 'Recipient/Ship-To Name (required) - Map "First Name"/"Last Name" or "Recipient Name". Do NOT map generic "Customer Name" if a specific "Recipient" column exists.',
     AddressLine1: 'Street address line 1 (required)',
     City: 'City name (required)',
     Province: 'Province or state code (required)',
