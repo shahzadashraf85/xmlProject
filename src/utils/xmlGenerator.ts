@@ -247,7 +247,7 @@ export function generateXML(rows: OrderRow[], settings: GeneratorSettings): stri
                 addressLine1: truncate(row.AddressLine1?.toString() || '', 44),
                 addressLine2: truncate(row.AddressLine2?.toString() || '', 44),
                 city: truncate(row.City?.toString() || '', 40),
-                province: row.Province?.toString() || '',
+                province: normalizeProvince(row.Province?.toString() || ''),
                 postalCode: cleanPostalCode(row.PostalCode?.toString()),
                 countryCode: normalizeCountryCode(row.Country?.toString()),
                 phone: cleanPhone(row.Phone?.toString()),
