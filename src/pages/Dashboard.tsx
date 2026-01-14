@@ -437,8 +437,8 @@ export default function Dashboard() {
                                                 </td>
                                                 <td className="px-3 py-2 text-sm text-gray-900 font-bold text-green-700">
                                                     {row.Price ? `$${row.Price}` : '-'}
-                                                    {row.Price && Number(row.Price) > (settings.signatureThreshold || 200) && (
-                                                        <span className="ml-1 text-xs text-orange-600" title={`Signature Required (> $${settings.signatureThreshold || 200})`}>✍️</span>
+                                                    {row.Price && Number(row.Price) > (settings.signatureThreshold || 100) && (
+                                                        <span className="ml-1 text-xs text-orange-600" title={`Signature Required (> $${settings.signatureThreshold || 100})`}>✍️</span>
                                                     )}
                                                 </td>
                                             </tr>

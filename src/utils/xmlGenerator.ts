@@ -147,7 +147,7 @@ function generateDeliveryRequest(request: DeliveryRequest, settings: GeneratorSe
     xml += `${indent}    <product-id>${escapeXml(request.serviceCode)}</product-id>\n`;
 
     // Order Options (Signature for > threshold)
-    if (request.price && request.price > (settings.signatureThreshold || 200)) {
+    if (request.price && request.price > (settings.signatureThreshold || 100)) {
         xml += `${indent}    <options>\n`;
         xml += `${indent}      <option code="SO"/>\n`;
         xml += `${indent}    </options>\n`;

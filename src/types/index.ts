@@ -41,7 +41,7 @@ export interface GeneratorSettings {
 }
 
 export const DEFAULT_SETTINGS: GeneratorSettings = {
-    signatureThreshold: 200,
+    signatureThreshold: 100,
 };
 
 export const SERVICE_CODES = [
