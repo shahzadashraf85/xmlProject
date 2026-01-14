@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export const REQUIRED_FIELDS = {
-    ContactName: 'Recipient/Ship-To Name (required) - Map "First Name"/"Last Name" or "Recipient Name". Do NOT map generic "Customer Name" if a specific "Recipient" column exists.',
+    ContactName: 'Recipient/Ship-To Name (required) - Map "Recipient Name" or "Full Name". If separate First/Last name columns exist, map them to FirstName/LastName fields instead.',
     AddressLine1: 'Street address line 1 (required)',
     City: 'City name (required)',
     Province: 'Province or state code (required)',
@@ -20,7 +20,9 @@ export const REQUIRED_FIELDS = {
     Quantity: 'Quantity of items (optional)',
     Price: 'Total Order Amount (optional) - Map ONLY the "Amount" or "Grand Total" column. Ignore Tax/Subtotal.',
     Description: 'Item details or description (optional)',
-    Category: 'Package size category (lp, s, m, l, xl)',
+    Category: 'Package size category. Map columns like "Size", "Box Size", "Type", "Package Type", or "Category" to this field.',
+    FirstName: 'First Name (optional) - Map specific First Name column here',
+    LastName: 'Last Name (optional) - Map specific Last Name column here',
 };
 
 export const CATEGORY_DIMENSIONS: Record<string, { Length: number; Width: number; Height: number; Weight: number }> = {
@@ -88,7 +90,7 @@ Return ONLY a valid JSON object in this exact format (no markdown, no explanatio
 Rules:
 - Use exact header names from the list I provided
 - Use exact required field names (ContactName, AddressLine1, etc.)
-- IMPORTANT: If you see separate "First Name" and "Last Name" columns, map BOTH of them to "ContactName"
+- IMPORTANT: If you see separate "First Name" and "Last Name" columns, map them to "FirstName" and "LastName" respectively. Do NOT map both to "ContactName".
 - Map to null if no match
 - Return ONLY the JSON object, nothing else`;
 

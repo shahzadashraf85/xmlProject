@@ -22,6 +22,8 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
     Quantity: ['quantity', 'qty', 'count', 'amount', 'number of items'],
     Price: ['price', 'value', 'total', 'amount', 'order total', 'unit price', 'declared value'],
     Category: ['category', 'cat', 'size', 'type', 'package size', 'box size'],
+    FirstName: ['firstname', 'first name', 'fname', 'given name'],
+    LastName: ['lastname', 'last name', 'lname', 'surname', 'family name'],
 };
 
 function normalizeHeader(header: string): string {
@@ -69,6 +71,13 @@ export function parseExcelFile(file: File): Promise<ParsedData> {
                         const normalizedKey = headerMap.get(key) || key;
                         transformedRow[normalizedKey] = value;
                     });
+
+                    // Combine First/Last Name if ContactName is missing
+                    if (!transformedRow.ContactName && (transformedRow.FirstName || transformedRow.LastName)) {
+                        const first = transformedRow.FirstName?.toString().trim() || '';
+                        const last = transformedRow.LastName?.toString().trim() || '';
+                        transformedRow.ContactName = `${first} ${last}`.trim();
+                    }
 
                     // Apply Dimensions from Category if present
                     if (transformedRow.Category) {
@@ -122,7 +131,16 @@ export async function parseExcelFileWithAI(file: File, geminiApiKey: string): Pr
 
                 // Transform rows using AI mapping
                 const rows: OrderRow[] = rawData.map(row => {
-                    return applyMapping(row, aiMapping);
+                    const mapped = applyMapping(row, aiMapping);
+
+                    // Combine First/Last Name if ContactName is missing
+                    if (!mapped.ContactName && (mapped.FirstName || mapped.LastName)) {
+                        const first = mapped.FirstName?.toString().trim() || '';
+                        const last = mapped.LastName?.toString().trim() || '';
+                        mapped.ContactName = `${first} ${last}`.trim();
+                    }
+
+                    return mapped;
                 });
 
                 // Get mapped headers
