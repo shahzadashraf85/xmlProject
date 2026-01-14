@@ -20,6 +20,7 @@ export default function History() {
     const [records, setRecords] = useState<HistoryRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
 
     useEffect(() => {
         fetchHistory();
@@ -251,6 +252,13 @@ export default function History() {
                                                     XML
                                                 </button>
 
+                                                <button
+                                                    onClick={() => setSelectedRecord(record)}
+                                                    className="ml-4 text-green-600 hover:text-green-800 font-medium"
+                                                >
+                                                    View
+                                                </button>
+
                                                 {record.parsed_data && (
                                                     <button
                                                         onClick={() => handlePrint(record.parsed_data!)}
@@ -274,6 +282,98 @@ export default function History() {
                         </div>
                     )}
                 </div>
+
+                {/* Details Modal */}
+                {selectedRecord && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+                            <div className="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">Transaction Details</h2>
+                                    <p className="text-sm text-gray-500 mt-1">
+                                        {selectedRecord.source_filename} • {new Date(selectedRecord.created_at).toLocaleString()}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedRecord(null)}
+                                    className="text-gray-400 hover:text-gray-600 transition"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-auto">
+                                {!selectedRecord.parsed_data || selectedRecord.parsed_data.length === 0 ? (
+                                    <p className="text-gray-500 text-center py-8">No detailed data available for this record.</p>
+                                ) : (
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ref</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact Name</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">City/Prov/PC</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Country</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dims (L/W/H/W)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {selectedRecord.parsed_data.map((row: any, idx: number) => (
+                                                <tr key={idx}>
+                                                    <td className="px-3 py-2 text-sm text-gray-900">{idx + 1}</td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900">{row.CustomerReference || '-'}</td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900 font-medium">{row.ContactName || '-'}</td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
+                                                        {row.AddressLine1}<br />
+                                                        <span className="text-xs text-gray-500">{row.AddressLine2}</span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900">
+                                                        {row.City}, {row.Province} {row.PostalCode}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900">{row.Country || 'CA'}</td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900">
+                                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                                            {row.ServiceCode || 'DOM.EP'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-sm text-gray-900 font-bold text-green-700">
+                                                        {row.Price ? `$${row.Price}` : '-'}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-xs text-gray-500">
+                                                        {row.Length}x{row.Width}x{row.Height} ({row.Weight}g)
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+
+                            <div className="p-6 border-t bg-gray-50 rounded-b-xl flex justify-end gap-3">
+                                {selectedRecord.parsed_data && (
+                                    <button
+                                        onClick={() => handlePrint(selectedRecord.parsed_data!)}
+                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition"
+                                    >
+                                        🖨️ Reprint Pick List
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setSelectedRecord(null)}
+                                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </main >
         </div >
     );
