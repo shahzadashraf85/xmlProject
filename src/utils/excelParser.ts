@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { OrderRow, ParsedData, ValidationError } from '../types';
-import { mapColumnsWithAI, applyMapping } from './aiMapper';
+import { mapColumnsWithAI, applyMapping, CATEGORY_DIMENSIONS } from './aiMapper';
 
 const COLUMN_MAPPINGS: Record<string, string[]> = {
     CustomerReference: ['customerreference', 'order number', 'orderid', 'order id', 'ref', 'ordernumber', 'order#', 'order no', 'reference'],
@@ -21,6 +21,7 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
     ServiceCode: ['servicecode', 'service code', 'service', 'productid', 'product id', 'shipping method', 'delivery method'],
     Quantity: ['quantity', 'qty', 'count', 'amount', 'number of items'],
     Price: ['price', 'value', 'total', 'amount', 'order total', 'unit price', 'declared value'],
+    Category: ['category', 'cat', 'size', 'type', 'package size', 'box size'],
 };
 
 function normalizeHeader(header: string): string {
@@ -68,6 +69,19 @@ export function parseExcelFile(file: File): Promise<ParsedData> {
                         const normalizedKey = headerMap.get(key) || key;
                         transformedRow[normalizedKey] = value;
                     });
+
+                    // Apply Dimensions from Category if present
+                    if (transformedRow.Category) {
+                        const cat = transformedRow.Category.toString().toLowerCase().trim();
+                        const dims = CATEGORY_DIMENSIONS[cat];
+                        if (dims) {
+                            transformedRow.Length = dims.Length;
+                            transformedRow.Width = dims.Width;
+                            transformedRow.Height = dims.Height;
+                            transformedRow.Weight = dims.Weight;
+                        }
+                    }
+
                     return transformedRow;
                 });
 

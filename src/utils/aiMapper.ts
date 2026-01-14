@@ -20,6 +20,24 @@ export const REQUIRED_FIELDS = {
     Quantity: 'Quantity of items (optional)',
     Price: 'Total Order Amount (optional) - Map ONLY the "Amount" or "Grand Total" column. Ignore Tax/Subtotal.',
     Description: 'Item details or description (optional)',
+    Category: 'Package size category (lp, s, m, l, xl)',
+};
+
+export const CATEGORY_DIMENSIONS: Record<string, { Length: number; Width: number; Height: number; Weight: number }> = {
+    // Converted kg to g (2kg -> 2000g) assuming default weight unit is grams?
+    // Wait, previous code used grams.
+    // Image says "weight: 2". Usually users mean kg or lb.
+    // If checking convertWeightToGrams in xmlGenerator: "If value <= 50, treat as kg and convert to grams"
+    // So 2 -> 2000.
+    // I should provide the raw number "2" and let xmlGenerator handle the conversion logic?
+    // xmlGenerator: "if (numWeight <= 50) return Math.round(numWeight * 1000);"
+    // So if I pass 2, it becomes 2000. Correct.
+
+    'lp': { Length: 40, Width: 28, Height: 18, Weight: 2 },
+    's': { Length: 20, Width: 15, Height: 10, Weight: 0.5 },
+    'm': { Length: 22, Width: 12, Height: 7, Weight: 0.7 },
+    'l': { Length: 33, Width: 23, Height: 11, Weight: 1 },
+    'xl': { Length: 45, Width: 25, Height: 18, Weight: 5 }
 };
 
 export async function mapColumnsWithAI(headers: string[], apiKey: string): Promise<Record<string, string>> {
@@ -155,5 +173,21 @@ export function applyMapping(row: any, mapping: Record<string, string>): any {
         }
     });
 
+    // Apply Dimensions from Category if present
+    if (mappedRow.Category) {
+        const cat = mappedRow.Category.toString().toLowerCase().trim();
+        const dims = CATEGORY_DIMENSIONS[cat];
+        if (dims) {
+            // Overwrite or Fill? User said "find related data and fill in".
+            // Typically strict category overrides manual specific dims if both present?
+            // Let's Set them.
+            mappedRow.Length = dims.Length;
+            mappedRow.Width = dims.Width;
+            mappedRow.Height = dims.Height;
+            mappedRow.Weight = dims.Weight;
+        }
+    }
+
     return mappedRow;
 }
+

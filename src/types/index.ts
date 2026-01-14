@@ -17,6 +17,7 @@ export interface OrderRow {
     ServiceCode?: string;
     Quantity?: number | string;
     Price?: number | string;
+    Category?: string;
     [key: string]: any;
 }
 
