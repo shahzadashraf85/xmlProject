@@ -146,8 +146,8 @@ function generateDeliveryRequest(request: DeliveryRequest, settings: GeneratorSe
     // Product ID
     xml += `${indent}    <product-id>${escapeXml(request.serviceCode)}</product-id>\n`;
 
-    // Order Options (Signature for > $200)
-    if (request.price && request.price > 200) {
+    // Order Options (Signature for > threshold)
+    if (request.price && request.price > (settings.signatureThreshold || 200)) {
         xml += `${indent}    <options>\n`;
         xml += `${indent}      <option code="SO"/>\n`;
         xml += `${indent}    </options>\n`;
@@ -163,8 +163,8 @@ function generateDeliveryRequest(request: DeliveryRequest, settings: GeneratorSe
     xml += `${indent}      </physical-characteristics>\n`;
     xml += `${indent}    </item-specification>\n`;
 
-    // Notification (if enabled)
-    if (settings.notificationsEnabled && request.email) {
+    // Notification (always enabled by default)
+    if (request.email) {
         xml += `${indent}    <notification>\n`;
         xml += `${indent}      <client-notif-email>\n`;
         xml += `${indent}        <email>${escapeXml(request.email)}</email>\n`;
@@ -215,7 +215,7 @@ export function generateXML(rows: OrderRow[], settings: GeneratorSettings): stri
 
     rows.forEach((row) => {
         const rawServiceCode = row.ServiceCode?.toString().trim();
-        const serviceCode = normalizeServiceCode(rawServiceCode, settings.defaultServiceCode);
+        const serviceCode = normalizeServiceCode(rawServiceCode, 'DOM.EP');
 
         // Ensure service code is never empty
         if (!serviceCode) {
@@ -231,7 +231,7 @@ export function generateXML(rows: OrderRow[], settings: GeneratorSettings): stri
             price = parseFloat(priceStr);
         }
 
-        const shouldDuplicate = settings.duplicateByQuantity && quantity > 1;
+        const shouldDuplicate = quantity > 1;
         const iterations = shouldDuplicate ? quantity : 1;
 
         for (let i = 0; i < iterations; i++) {
@@ -253,10 +253,10 @@ export function generateXML(rows: OrderRow[], settings: GeneratorSettings): stri
                 phone: cleanPhone(row.Phone?.toString()),
                 email: truncate(row.Email?.toString() || '', 70),
                 serviceCode: serviceCode,
-                length: formatDimension(row.Length, settings.defaultLength),
-                width: formatDimension(row.Width, settings.defaultWidth),
-                height: formatDimension(row.Height, settings.defaultHeight),
-                weight: convertWeightToGrams(row.Weight, settings.defaultWeight),
+                length: formatDimension(row.Length, 40),
+                width: formatDimension(row.Width, 30),
+                height: formatDimension(row.Height, 10),
+                weight: convertWeightToGrams(row.Weight, 2000),
                 price: price, // Add parsed price
             };
 

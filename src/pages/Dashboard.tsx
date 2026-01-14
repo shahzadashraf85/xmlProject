@@ -6,7 +6,7 @@ import { applyMapping, REQUIRED_FIELDS } from '../utils/aiMapper';
 import { generateXML, downloadXML, normalizeServiceCode } from '../utils/xmlGenerator';
 import { supabase } from '../lib/supabase';
 import type { OrderRow, ValidationError, GeneratorSettings } from '../types';
-import { DEFAULT_SETTINGS, SERVICE_CODES } from '../types';
+import { DEFAULT_SETTINGS } from '../types';
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
@@ -212,7 +212,7 @@ export default function Dashboard() {
                     user_id: user.id,
                     source_filename: file.name,
                     row_count: parsedRows.length,
-                    service_code: settings.defaultServiceCode,
+                    service_code: 'DOM.EP',
                     xml_storage_path: xmlFileName,
                     source_storage_path: sourceFileName,
                     settings: settings,
@@ -381,78 +381,14 @@ export default function Dashboard() {
                         <h2 className="text-xl font-semibold mb-4">Settings</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Service Code</label>
-                                <select
-                                    value={settings.defaultServiceCode}
-                                    onChange={(e) => setSettings({ ...settings, defaultServiceCode: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                >
-                                    {SERVICE_CODES.map((sc) => (
-                                        <option key={sc.value} value={sc.value}>{sc.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Default Length (cm)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Signature Threshold ($)</label>
                                 <input
                                     type="number"
-                                    value={settings.defaultLength}
-                                    onChange={(e) => setSettings({ ...settings, defaultLength: parseFloat(e.target.value) })}
+                                    value={settings.signatureThreshold}
+                                    onChange={(e) => setSettings({ ...settings, signatureThreshold: parseFloat(e.target.value) })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Default Width (cm)</label>
-                                <input
-                                    type="number"
-                                    value={settings.defaultWidth}
-                                    onChange={(e) => setSettings({ ...settings, defaultWidth: parseFloat(e.target.value) })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Default Height (cm)</label>
-                                <input
-                                    type="number"
-                                    value={settings.defaultHeight}
-                                    onChange={(e) => setSettings({ ...settings, defaultHeight: parseFloat(e.target.value) })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Default Weight (grams)</label>
-                                <input
-                                    type="number"
-                                    value={settings.defaultWeight}
-                                    onChange={(e) => setSettings({ ...settings, defaultWeight: parseFloat(e.target.value) })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.notificationsEnabled}
-                                        onChange={(e) => setSettings({ ...settings, notificationsEnabled: e.target.checked })}
-                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">Notifications</span>
-                                </label>
-
-                                <label className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.duplicateByQuantity}
-                                        onChange={(e) => setSettings({ ...settings, duplicateByQuantity: e.target.checked })}
-                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">Duplicate by Qty</span>
-                                </label>
+                                <p className="text-xs text-gray-500 mt-1">Orders above this amount will require a signature.</p>
                             </div>
                         </div>
                     </div>
@@ -496,13 +432,13 @@ export default function Dashboard() {
                                                 <td className="px-3 py-2 text-sm text-gray-900">{row.Country || 'CA'}</td>
                                                 <td className="px-3 py-2 text-sm text-gray-900">
                                                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                                        {normalizeServiceCode(row.ServiceCode, settings.defaultServiceCode)}
+                                                        {normalizeServiceCode(row.ServiceCode, 'DOM.EP')}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-2 text-sm text-gray-900 font-bold text-green-700">
                                                     {row.Price ? `$${row.Price}` : '-'}
-                                                    {row.Price && Number(row.Price) > 200 && (
-                                                        <span className="ml-1 text-xs text-orange-600" title="Signature Required">✍️</span>
+                                                    {row.Price && Number(row.Price) > (settings.signatureThreshold || 200) && (
+                                                        <span className="ml-1 text-xs text-orange-600" title={`Signature Required (> $${settings.signatureThreshold || 200})`}>✍️</span>
                                                     )}
                                                 </td>
                                             </tr>

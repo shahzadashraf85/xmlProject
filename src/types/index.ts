@@ -37,23 +37,11 @@ export interface ParsedData {
 }
 
 export interface GeneratorSettings {
-    defaultServiceCode: string;
-    defaultLength: number;
-    defaultWidth: number;
-    defaultHeight: number;
-    defaultWeight: number;
-    notificationsEnabled: boolean;
-    duplicateByQuantity: boolean;
+    signatureThreshold: number;
 }
 
 export const DEFAULT_SETTINGS: GeneratorSettings = {
-    defaultServiceCode: 'DOM.EP',
-    defaultLength: 40,
-    defaultWidth: 30,
-    defaultHeight: 10,
-    defaultWeight: 2000, // in grams
-    notificationsEnabled: true,
-    duplicateByQuantity: true,
+    signatureThreshold: 200,
 };
 
 export const SERVICE_CODES = [
