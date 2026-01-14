@@ -22,6 +22,7 @@ export default function Dashboard() {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [useAI, setUseAI] = useState(false);
     const [aiMapping, setAiMapping] = useState<Record<string, string> | null>(null);
+    const [addressWarnings, setAddressWarnings] = useState<OrderRow[] | null>(null);
 
     // Manual Mapping State
     const [rawRows, setRawRows] = useState<any[]>([]);
@@ -141,6 +142,18 @@ export default function Dashboard() {
         }
     }
 
+    function executeGeneration() {
+        try {
+            const xml = generateXML(parsedRows, settings);
+            setGeneratedXML(xml);
+            setMessage({ type: 'success', text: 'XML generated successfully!' });
+            setAddressWarnings(null);
+        } catch (error: any) {
+            setMessage({ type: 'error', text: error.message || 'Failed to generate XML' });
+            setAddressWarnings(null);
+        }
+    }
+
     function handleGenerateXML() {
         setMessage(null);
 
@@ -152,13 +165,19 @@ export default function Dashboard() {
             return;
         }
 
-        try {
-            const xml = generateXML(parsedRows, settings);
-            setGeneratedXML(xml);
-            setMessage({ type: 'success', text: 'XML generated successfully!' });
-        } catch (error: any) {
-            setMessage({ type: 'error', text: error.message || 'Failed to generate XML' });
+        // Check for Address Warnings (Missing House Number)
+        const suspiciousRows = parsedRows.filter(row => {
+            const addr = row.AddressLine1 ? row.AddressLine1.toString().trim() : '';
+            // Check if it starts with a digit. If empty, it's already a validation error, but safe to check.
+            return addr.length > 0 && !/^\d/.test(addr);
+        });
+
+        if (suspiciousRows.length > 0) {
+            setAddressWarnings(suspiciousRows);
+            return;
         }
+
+        executeGeneration();
     }
 
     function handleDownloadXML() {
@@ -446,6 +465,34 @@ export default function Dashboard() {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Warning Modal */}
+                {addressWarnings && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl flex flex-col">
+                            <div className="p-6 border-b">
+                                <h2 className="text-xl font-bold text-orange-600">⚠️ Address Format Warnings</h2>
+                                <p className="text-sm text-gray-600 mt-2">
+                                    The following addresses do not seem to start with a house number (e.g., "123 Main St").
+                                    Please review them before proceeding.
+                                </p>
+                            </div>
+                            <div className="p-6 overflow-y-auto max-h-96 bg-gray-50">
+                                {addressWarnings.map((row, i) => (
+                                    <div key={i} className="mb-3 p-3 bg-white border rounded shadow-sm">
+                                        <div className="font-bold text-gray-900">{row.ContactName || 'Unknown Contact'}</div>
+                                        <div className="text-red-600 font-mono">{row.AddressLine1}</div>
+                                        <div className="text-xs text-gray-500">{row.City}, {row.Province}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="p-6 border-t flex justify-end gap-3">
+                                <button onClick={() => setAddressWarnings(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                                <button onClick={executeGeneration} className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">Proceed Anyway</button>
+                            </div>
                         </div>
                     </div>
                 )}
