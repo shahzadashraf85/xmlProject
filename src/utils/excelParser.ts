@@ -38,6 +38,38 @@ function normalizeHeader(header: string): string {
     return header;
 }
 
+function formatCanadaPostAddress(addr1: string, addr2: string): { addressLine1: string; addressLine2: string } {
+    if (!addr1) return { addressLine1: '', addressLine2: addr2 || '' };
+    if (!addr2) return { addressLine1: addr1, addressLine2: '' };
+
+    const cleanAddr1 = addr1.toString().trim();
+    let cleanAddr2 = addr2.toString().trim();
+
+    // Common Unit indicators to strip
+    const unitIndicators = /^(unit|suite|apt|apartment|ste|#)\s*[:.]?\s*/i;
+
+    // Check if Line 2 looks like a unit info
+    // Logic: If it starts with an indicator OR (is very short AND has a digit)
+    const hasDigit = /\d/.test(cleanAddr2);
+    const isUnit = unitIndicators.test(cleanAddr2) || (cleanAddr2.length < 6 && hasDigit);
+
+    if (isUnit) {
+        // Strip the indicator (e.g. "Suite 100" -> "100")
+        const unitNumber = cleanAddr2.replace(unitIndicators, '').trim();
+
+        // Canada Post Format: UNIT-HOUSE_NUM STREET
+        // We only combine if the unit number is alphanumeric and reasonably short
+        if (unitNumber.length > 0 && unitNumber.length < 8) {
+            return {
+                addressLine1: `${unitNumber}-${cleanAddr1}`,
+                addressLine2: '' // standard suggests clearing line 2 if merged
+            };
+        }
+    }
+
+    // Default: Return original if no merge rule matched
+    return { addressLine1: cleanAddr1, addressLine2: cleanAddr2 };
+}
 
 export function parseExcelFile(file: File): Promise<ParsedData> {
     return new Promise((resolve, reject) => {
@@ -71,6 +103,14 @@ export function parseExcelFile(file: File): Promise<ParsedData> {
                         const normalizedKey = headerMap.get(key) || key;
                         transformedRow[normalizedKey] = value;
                     });
+
+                    // Format Address (Canada Post Style)
+                    const { addressLine1, addressLine2 } = formatCanadaPostAddress(
+                        transformedRow.AddressLine1?.toString() || '',
+                        transformedRow.AddressLine2?.toString() || ''
+                    );
+                    transformedRow.AddressLine1 = addressLine1;
+                    transformedRow.AddressLine2 = addressLine2;
 
                     // Combine First/Last Name if ContactName is missing
                     if (!transformedRow.ContactName && (transformedRow.FirstName || transformedRow.LastName)) {
@@ -132,6 +172,14 @@ export async function parseExcelFileWithAI(file: File, geminiApiKey: string): Pr
                 // Transform rows using AI mapping
                 const rows: OrderRow[] = rawData.map(row => {
                     const mapped = applyMapping(row, aiMapping);
+
+                    // Format Address (Canada Post Style)
+                    const { addressLine1, addressLine2 } = formatCanadaPostAddress(
+                        mapped.AddressLine1?.toString() || '',
+                        mapped.AddressLine2?.toString() || ''
+                    );
+                    mapped.AddressLine1 = addressLine1;
+                    mapped.AddressLine2 = addressLine2;
 
                     // Combine First/Last Name if ContactName is missing
                     if (!mapped.ContactName && (mapped.FirstName || mapped.LastName)) {
