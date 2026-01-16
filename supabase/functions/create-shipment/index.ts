@@ -119,18 +119,25 @@ serve(async (req) => {
       )
     }
 
-    // 4. Extract Tracking PIN & Label Link using Regex (simple & fast)
-    const pinMatch = responseText.match(/<pin>(.*?)<\/pin>/);
-    const linkMatch = responseText.match(/<link rel="label" href="(.*?)"/);
+    // 4. Extract Tracking PIN & Label Link
+    // Correct tag is <tracking-pin>, but fallback to <pin> just in case
+    const pinMatch = responseText.match(/<tracking-pin>(.*?)<\/tracking-pin>/) || responseText.match(/<pin>(.*?)<\/pin>/);
+    const linkMatch = responseText.match(/<link rel="label" href="(.*?)"/) || responseText.match(/<link href="(.*?)" rel="label"/);
 
     const trackingPin = pinMatch ? pinMatch[1] : null;
     const labelUrl = linkMatch ? linkMatch[1] : null;
+
+    if (!trackingPin) {
+      console.error("Failed to parse tracking pin from success response:", responseText);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         tracking_pin: trackingPin,
-        label_url: labelUrl
+        label_url: labelUrl,
+        // Return raw response if parsing failed, so valid shipments aren't lost to UI
+        details: !trackingPin ? responseText : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
