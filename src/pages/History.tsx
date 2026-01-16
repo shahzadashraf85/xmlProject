@@ -223,7 +223,11 @@ export default function History() {
             });
 
             if (error) throw new Error(error.message);
-            if (!data.success) throw new Error(data.error || 'Unknown API error');
+            if (!data.success) {
+                // detailed error from backend
+                const detailMsg = data.details ? `\nDetails: ${data.details}` : '';
+                throw new Error((data.error || 'Unknown API error') + detailMsg);
+            }
 
             // 3. Update Local State
             const updatedRows = [...selectedRecord.parsed_data!];
