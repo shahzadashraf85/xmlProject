@@ -52,6 +52,7 @@ serve(async (req) => {
         <address-line-1>123 Sender St</address-line-1>
         <city>Puslinch</city>
         <prov-state>ON</prov-state>
+        <country-code>CA</country-code>
         <postal-zip-code>${shippingPoint}</postal-zip-code>
       </address-details>
     </sender>
