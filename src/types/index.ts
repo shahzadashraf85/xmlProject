@@ -40,12 +40,34 @@ export interface GeneratorSettings {
     signatureThreshold: number;
 }
 
+export interface DeviceSpecs {
+    processor: string;
+    ram: string;
+    storage: string;
+    graphics: string;
+    os: string;
+    condition: string;
+
+    // Laptop Specific
+    display?: string;
+    ports?: string;
+    connectivity?: string;
+    keyboard?: string;
+    battery?: string;
+
+    // Desktop Specific
+    form_factor?: string;
+    network?: string;
+    warranty?: string;
+}
+
 export interface InventoryItem {
     id: string;
     serial_number: string;
     brand: string;
     model: string;
-    specifications?: string;
+    device_type: 'laptop' | 'desktop';
+    specs: DeviceSpecs;
     grade: 'A' | 'B' | 'C';
     repair_needed_description?: string;
     status: 'pending_triage' | 'in_repair' | 'ready_to_ship' | 'scrapped';

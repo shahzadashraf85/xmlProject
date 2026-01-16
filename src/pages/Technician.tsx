@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import type { InventoryItem, RepairSession } from '../types';
+import type { InventoryItem, RepairSession, DeviceSpecs } from '../types';
 
 export default function Technician() {
     const { user } = useAuth();
@@ -30,15 +30,13 @@ export default function Technician() {
             if (devError) throw new Error('Device not found');
             setDevice(dev);
 
-            // 2. Check for ACTIVE session (started but not ended) for this device? 
-            // Or for this technician? Assuming one tech works on one task.
-            // Let's check session for THIS device specifically.
+            // 2. Check for ACTIVE session
             const { data: session, error: sessError } = await supabase
                 .from('repair_sessions')
                 .select('*')
                 .eq('inventory_id', dev.id)
-                .is('ended_at', null) // Still open
-                .maybeSingle(); // might be null
+                .is('ended_at', null)
+                .maybeSingle();
 
             if (!sessError && session) {
                 setActiveSession(session);
@@ -54,7 +52,6 @@ export default function Technician() {
     async function startWork() {
         if (!device || !user) return;
         try {
-            // Create Session
             const { data, error } = await supabase
                 .from('repair_sessions')
                 .insert({
@@ -68,14 +65,8 @@ export default function Technician() {
             if (error) throw error;
             setActiveSession(data);
 
-            // Update Device Status
-            await supabase
-                .from('inventory_items')
-                .update({ status: 'in_repair' })
-                .eq('id', device.id);
-
-            setDevice({ ...device, status: 'in_repair' });
-
+            // Update Status
+            await updateDeviceStatus('in_repair');
         } catch (err: any) {
             alert('Failed to start work: ' + err.message);
         }
@@ -84,7 +75,6 @@ export default function Technician() {
     async function stopWork() {
         if (!activeSession || !device) return;
         try {
-            // End Session
             const { error } = await supabase
                 .from('repair_sessions')
                 .update({
@@ -99,12 +89,56 @@ export default function Technician() {
             setNotes('');
             alert('Session recorded successfully!');
 
-            // Refetch to see updated state?
-            // Maybe ask if status changed?
+            // Ask if ready?
+            if (device.grade === 'A') {
+                await updateDeviceStatus('ready_to_ship');
+            } else if (device.grade === 'C') {
+                await updateDeviceStatus('scrapped');
+            } else {
+                await updateDeviceStatus('pending_triage');
+            }
+
         } catch (err: any) {
             alert('Failed to stop work: ' + err.message);
         }
     }
+
+    async function updateDeviceStatus(status: InventoryItem['status']) {
+        if (!device) return;
+        await supabase.from('inventory_items').update({ status }).eq('id', device.id);
+        setDevice(prev => prev ? ({ ...prev, status }) : null);
+    }
+
+    async function saveSpecs() {
+        if (!device) return;
+        try {
+            const { error } = await supabase
+                .from('inventory_items')
+                .update({
+                    grade: device.grade,
+                    specs: device.specs
+                })
+                .eq('id', device.id);
+
+            if (error) throw error;
+            alert('Specs & Grade updated successfully!');
+        } catch (err: any) {
+            alert('Error updating specs: ' + err.message);
+        }
+    }
+
+    const updateSpecField = (field: keyof DeviceSpecs, value: string) => {
+        if (!device) return;
+        setDevice({
+            ...device,
+            specs: { ...device.specs, [field]: value }
+        });
+    };
+
+    const updateGrade = (grade: 'A' | 'B' | 'C') => {
+        if (!device) return;
+        setDevice({ ...device, grade });
+    };
 
     return (
         <div className="p-8 max-w-4xl mx-auto">
@@ -127,7 +161,7 @@ export default function Technician() {
                         disabled={loading}
                         className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {loading ? 'Searching...' : 'Lookup Device'}
+                        {loading ? 'Searching...' : 'Lookup'}
                     </button>
                 </div>
             </form>
@@ -137,11 +171,16 @@ export default function Technician() {
                 <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
                     <div className="p-6 bg-gray-50 border-b flex justify-between items-start">
                         <div>
-                            <span className={`inline-block px-2 py-1 rounded text-xs font-bold mb-2 ${device.grade === 'A' ? 'bg-green-100 text-green-800' :
-                                    device.grade === 'B' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                Grade {device.grade}
-                            </span>
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${device.grade === 'A' ? 'bg-green-100 text-green-800' :
+                                        device.grade === 'B' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                    }`}>
+                                    Grade {device.grade}
+                                </span>
+                                <span className="text-xs uppercase font-bold text-gray-500 tracking-wider border px-2 py-1 rounded bg-white">
+                                    {device.device_type}
+                                </span>
+                            </div>
                             <h2 className="text-3xl font-bold text-gray-900">{device.brand} {device.model}</h2>
                             <p className="text-gray-500 font-mono mt-1">SN: {device.serial_number}</p>
                         </div>
@@ -152,12 +191,73 @@ export default function Technician() {
                     </div>
 
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div>
-                            <h3 className="font-semibold text-gray-700 mb-2">Device Specs</h3>
-                            <p className="p-3 bg-gray-50 rounded-lg text-sm">{device.specifications || 'No specs listed.'}</p>
+                        {/* Interactive Specs Section */}
+                        <div className={`p-4 rounded-xl border ${activeSession ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-100'}`}>
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="font-semibold text-gray-800">
+                                    {activeSession ? '📝 Edit Specifications' : '🔒 Device Specs'}
+                                </h3>
+                                {activeSession && (
+                                    <button onClick={saveSpecs} className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
+                                        Save Changes
+                                    </button>
+                                )}
+                            </div>
+
+                            {activeSession ? (
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500">Grade</label>
+                                        <div className="flex gap-2 mt-1">
+                                            {(['A', 'B', 'C'] as const).map(g => (
+                                                <button key={g} onClick={() => updateGrade(g)}
+                                                    className={`px-3 py-1 text-sm rounded border ${device.grade === g ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700'}`}>
+                                                    {g}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500">CPU</label>
+                                        <input className="block w-full text-sm p-1 rounded border border-blue-200"
+                                            value={device.specs?.processor || ''} onChange={e => updateSpecField('processor', e.target.value)} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500">RAM</label>
+                                            <input className="block w-full text-sm p-1 rounded border border-blue-200"
+                                                value={device.specs?.ram || ''} onChange={e => updateSpecField('ram', e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500">Storage</label>
+                                            <input className="block w-full text-sm p-1 rounded border border-blue-200"
+                                                value={device.specs?.storage || ''} onChange={e => updateSpecField('storage', e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500">Condition Notes</label>
+                                        <input className="block w-full text-sm p-1 rounded border border-blue-200"
+                                            value={device.specs?.condition || ''} onChange={e => updateSpecField('condition', e.target.value)} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 text-sm text-gray-700">
+                                    {device.specs ? (
+                                        <>
+                                            <p><strong>CPU:</strong> {device.specs.processor}</p>
+                                            <p><strong>RAM:</strong> {device.specs.ram}</p>
+                                            <p><strong>Storage:</strong> {device.specs.storage}</p>
+                                            <p><strong>Condition:</strong> {device.specs.condition}</p>
+                                            <p className="text-xs text-gray-500 mt-2">Start work to edit details.</p>
+                                        </>
+                                    ) : <p className="text-gray-400 italic">No specs found.</p>}
+                                </div>
+                            )}
                         </div>
+
+                        {/* Issues Section */}
                         <div>
-                            <h3 className="font-semibold text-red-700 mb-2">Issues to Fix</h3>
+                            <h3 className="font-semibold text-red-700 mb-2">Reported Issues</h3>
                             <p className="p-3 bg-red-50 text-red-800 rounded-lg text-sm border border-red-100">
                                 {device.repair_needed_description || 'No reported issues.'}
                             </p>
@@ -174,16 +274,16 @@ export default function Technician() {
                                 <span>⏱️</span> Start Repair Work
                             </button>
                         ) : (
-                            <div className="w-full max-w-md animate-pulse">
-                                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl text-center mb-4">
+                            <div className="w-full max-w-md">
+                                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl text-center mb-4 animate-pulse">
                                     <p className="text-yellow-800 font-bold text-lg">Work in Progress...</p>
                                     <p className="text-xs text-yellow-600">Started at {new Date(activeSession.started_at).toLocaleTimeString()}</p>
                                 </div>
 
                                 <textarea
-                                    className="w-full p-3 border rounded-lg mb-4 text-sm"
+                                    className="w-full p-3 border rounded-lg mb-4 text-sm focus:ring-2 focus:ring-blue-500"
                                     rows={3}
-                                    placeholder="Enter work notes before finishing..."
+                                    placeholder="Enter final work notes..."
                                     value={notes}
                                     onChange={e => setNotes(e.target.value)}
                                 ></textarea>
