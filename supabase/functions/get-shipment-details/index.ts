@@ -29,8 +29,13 @@ serve(async (req) => {
         console.log(`Searching for Ref: ${reference} in ${CP_ENV}`);
 
         // 2. Search by Reference
-        // GET /shipment?customer-ref={ref}
-        const searchUrl = `${CP_API_URL}/${CP_CUST_NUM}/${CP_CUST_NUM}/shipment?customer-ref=${encodeURIComponent(reference)}`;
+        // Standard Format: GET /rs/{mailed-by}/shipment?customer-ref={ref}
+        // MOBO Format: GET /rs/{mailed-by}/{mobo}/shipment... (Only used if acting as agent)
+
+        // We assume direct shipping (Self):
+        const searchUrl = `${CP_API_URL}/${CP_CUST_NUM}/shipment?customer-ref=${encodeURIComponent(reference)}`;
+
+        console.log(`Requesting: ${searchUrl.replace(CP_CUST_NUM, 'XXXXX')}`);
 
         const response = await fetch(searchUrl, {
             headers: {
@@ -40,11 +45,17 @@ serve(async (req) => {
         });
 
         const xmlText = await response.text();
+        console.log(`CP Status: ${response.status} in ${CP_ENV}`);
 
         if (!response.ok) {
-            // If 404 or empty list, it means not found
+            // Return detailed error for debugging
             return new Response(
-                JSON.stringify({ success: false, error: 'Shipment not found for this reference', raw: xmlText }),
+                JSON.stringify({
+                    success: false,
+                    error: `CP Error (${response.status}): Shipment not found or API error.`,
+                    details: xmlText.substring(0, 200), // Limit length
+                    env: CP_ENV
+                }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
         }
@@ -57,7 +68,11 @@ serve(async (req) => {
 
         if (!pinMatch) {
             return new Response(
-                JSON.stringify({ success: false, error: 'No tracking pin found in response' }),
+                JSON.stringify({
+                    success: false,
+                    error: 'Shipment found but no Tracking PIN in response.',
+                    debug_xml: xmlText
+                }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
         }
