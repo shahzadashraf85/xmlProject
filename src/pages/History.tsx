@@ -224,6 +224,12 @@ export default function History() {
 
             if (error) throw new Error(error.message);
             if (!data.success) {
+                // Log full error details to console for easy copying
+                console.error('=== CANADA POST API ERROR ===');
+                console.error('Error:', data.error);
+                console.error('Details:', data.details);
+                console.error('============================');
+
                 // detailed error from backend
                 const detailMsg = data.details ? `\nDetails: ${data.details}` : '';
                 throw new Error((data.error || 'Unknown API error') + detailMsg);
