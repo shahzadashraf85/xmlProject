@@ -129,15 +129,22 @@ serve(async (req) => {
 
     if (!trackingPin) {
       console.error("Failed to parse tracking pin from success response:", responseText);
+      // FORCE ERROR so frontend shows the XML
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Parsing Error: " + responseText.substring(0, 800), // SHOW ME THE XML!
+          details: responseText
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         tracking_pin: trackingPin,
-        label_url: labelUrl,
-        // Return raw response if parsing failed, so valid shipments aren't lost to UI
-        details: !trackingPin ? responseText : null
+        label_url: labelUrl
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
