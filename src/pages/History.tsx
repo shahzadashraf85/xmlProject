@@ -153,6 +153,61 @@ export default function History() {
 
 
 
+    async function handleCreateShipment(row: any, rowIndex: number) {
+        if (!selectedRecord) return;
+
+        const confirmShip = confirm(`Generate shipping label for ${row.ContactName}? This will charge your Canada Post account.`);
+        if (!confirmShip) return;
+
+        try {
+            // 1. Map CSV fields to API expected fields
+            const payload = {
+                id: `${selectedRecord.id.substring(0, 8)}-${rowIndex}`,
+                recipient_name: row.ContactName || 'Valued Customer',
+                recipient_company: row.Company || '',
+                address_line_1: row.AddressLine1,
+                city: row.City,
+                province: row.Province,
+                postal_code: row.PostalCode,
+                weight: 1, // Default or parse from row.Weight
+                service_code: row.ServiceCode || 'DOM.EP',
+                reference_number: row.CustomerReference
+            };
+
+            // 2. Call Edge Function
+            const { data, error } = await supabase.functions.invoke('create-shipment', {
+                body: { order: payload }
+            });
+
+            if (error) throw new Error(error.message);
+            if (!data.success) throw new Error(data.error || 'Unknown API error');
+
+            // 3. Update Local State
+            const updatedRows = [...selectedRecord.parsed_data!];
+            updatedRows[rowIndex] = {
+                ...updatedRows[rowIndex],
+                tracking_number: data.tracking_pin,
+                label_url: data.label_url
+            };
+
+            const updatedRecord = { ...selectedRecord, parsed_data: updatedRows };
+            setSelectedRecord(updatedRecord);
+
+            // 4. Persist to DB
+            const { error: dbError } = await supabase
+                .from('orders_imports')
+                .update({ parsed_data: updatedRows })
+                .eq('id', selectedRecord.id);
+
+            if (dbError) throw dbError;
+
+            alert(`Success! Tracking: ${data.tracking_pin}`);
+
+        } catch (err: any) {
+            alert('Shipment Failed: ' + err.message);
+        }
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -229,7 +284,7 @@ export default function History() {
                                                 onClick={() => setSelectedRecord(record)}
                                                 className="ml-4 text-green-600 hover:text-green-800 font-medium"
                                             >
-                                                View
+                                                View Details
                                             </button>
 
                                             {record.parsed_data && (
@@ -259,7 +314,7 @@ export default function History() {
             {/* Details Modal */}
             {selectedRecord && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col">
                         <div className="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-900">Transaction Details</h2>
@@ -288,37 +343,45 @@ export default function History() {
                                             <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ref</th>
                                             <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact Name</th>
                                             <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">City/Prov/PC</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Country</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dims (L/W/H/W)</th>
+                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Shipment / Tracking</th>
+                                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {selectedRecord.parsed_data.map((row: any, idx: number) => (
-                                            <tr key={idx}>
+                                            <tr key={idx} className="hover:bg-gray-50">
                                                 <td className="px-3 py-2 text-sm text-gray-900">{idx + 1}</td>
                                                 <td className="px-3 py-2 text-sm text-gray-900">{row.CustomerReference || '-'}</td>
                                                 <td className="px-3 py-2 text-sm text-gray-900 font-medium">{row.ContactName || '-'}</td>
                                                 <td className="px-3 py-2 text-sm text-gray-900 whitespace-nowrap">
-                                                    {row.AddressLine1}<br />
-                                                    <span className="text-xs text-gray-500">{row.AddressLine2}</span>
+                                                    <div>{row.AddressLine1}</div>
+                                                    <div className="text-xs text-gray-500">{row.City}, {row.Province} {row.PostalCode}</div>
                                                 </td>
-                                                <td className="px-3 py-2 text-sm text-gray-900">
-                                                    {row.City}, {row.Province} {row.PostalCode}
-                                                </td>
-                                                <td className="px-3 py-2 text-sm text-gray-900">{row.Country || 'CA'}</td>
-                                                <td className="px-3 py-2 text-sm text-gray-900">
-                                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                                        {row.ServiceCode || 'DOM.EP'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-3 py-2 text-sm text-gray-900 font-bold text-green-700">
-                                                    {row.Price ? `$${row.Price}` : '-'}
+                                                <td className="px-3 py-2 text-sm">
+                                                    {row.tracking_number ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded text-xs">
+                                                                {row.tracking_number}
+                                                            </span>
+                                                            {row.label_url && (
+                                                                <a href={row.label_url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline">
+                                                                    📄 Download Label
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleCreateShipment(row, idx)}
+                                                            className="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded shadow-sm hover:bg-green-700"
+                                                        >
+                                                            Create Label
+                                                        </button>
+                                                    )}
                                                 </td>
                                                 <td className="px-3 py-2 text-xs text-gray-500">
-                                                    {row.Length}x{row.Width}x{row.Height} ({row.Weight}g)
+                                                    <div>{row.ServiceCode || 'DOM.EP'}</div>
+                                                    <div>{row.Length}x{row.Width}x{row.Height}cm</div>
+                                                    <div>{row.Weight}g</div>
                                                 </td>
                                             </tr>
                                         ))}
