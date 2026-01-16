@@ -153,6 +153,49 @@ export default function History() {
 
 
 
+    async function handleFetchShipment(row: any, rowIndex: number) {
+        if (!selectedRecord || !row.CustomerReference) {
+            alert('Cannot fetch without a Customer Reference number.');
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase.functions.invoke('get-shipment-details', {
+                body: { reference: row.CustomerReference }
+            });
+
+            if (error) throw new Error(error.message);
+            if (!data.success) {
+                // If not found, just alert
+                alert(data.error || 'Shipment not found.');
+                return;
+            }
+
+            // Update State
+            const updatedRows = [...selectedRecord.parsed_data!];
+            updatedRows[rowIndex] = {
+                ...updatedRows[rowIndex],
+                tracking_number: data.tracking_pin,
+                label_url: data.label_url,
+                shipment_id: data.shipment_id
+            };
+
+            const updatedRecord = { ...selectedRecord, parsed_data: updatedRows };
+            setSelectedRecord(updatedRecord);
+
+            // Persist
+            await supabase
+                .from('orders_imports')
+                .update({ parsed_data: updatedRows })
+                .eq('id', selectedRecord.id);
+
+            alert(`Found! Tracking: ${data.tracking_pin}`);
+
+        } catch (err: any) {
+            alert('Fetch Failed: ' + err.message);
+        }
+    }
+
     async function handleCreateShipment(row: any, rowIndex: number) {
         if (!selectedRecord) return;
 
@@ -370,12 +413,21 @@ export default function History() {
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <button
-                                                            onClick={() => handleCreateShipment(row, idx)}
-                                                            className="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded shadow-sm hover:bg-green-700"
-                                                        >
-                                                            Create Label
-                                                        </button>
+                                                        <div className="flex flex-col gap-1 items-start">
+                                                            <button
+                                                                onClick={() => handleFetchShipment(row, idx)}
+                                                                className="px-3 py-1 bg-yellow-600 text-white text-xs font-bold rounded shadow-sm hover:bg-yellow-700 w-full"
+                                                                title="Find existing shipment by Reference #"
+                                                            >
+                                                                🔍 Find Existing
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleCreateShipment(row, idx)}
+                                                                className="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded shadow-sm hover:bg-green-700 w-full"
+                                                            >
+                                                                Create Label
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-2 text-xs text-gray-500">
