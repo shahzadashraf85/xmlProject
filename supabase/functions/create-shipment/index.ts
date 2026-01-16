@@ -109,7 +109,8 @@ serve(async (req) => {
           error: `CP Error (${response.status}): Failed to create shipment.`,
           details: responseText.substring(0, 500) // Show XML error
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 } // Keep bad request status
+        // Return 200 so the frontend can read the JSON body.
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
@@ -132,7 +133,8 @@ serve(async (req) => {
   } catch (error) {
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      // Return 200 so the frontend can read the error message.
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   }
 })

@@ -56,7 +56,7 @@ serve(async (req) => {
                     details: xmlText.substring(0, 200), // Limit length
                     env: CP_ENV
                 }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
             )
         }
 
@@ -90,7 +90,7 @@ serve(async (req) => {
     } catch (error) {
         return new Response(
             JSON.stringify({ success: false, error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
     }
 })
