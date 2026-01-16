@@ -13,6 +13,8 @@ export default function Inventory() {
     const [filterType, setFilterType] = useState('all');
     const [filterCondition, setFilterCondition] = useState('all');
 
+    const [editingId, setEditingId] = useState<string | null>(null);
+
     // Form State
     const emptySpecs: DeviceSpecs = {
         processor: '', ram: '', storage: '', graphics: '', os: '', condition: '',
@@ -76,34 +78,80 @@ export default function Inventory() {
     async function handleAddDevice(e: React.FormEvent) {
         e.preventDefault();
         try {
-            // Auto-map Grade to Condition text if empty
+            // Auto-map Grade to Condition text if empty (only for new or if cleared)
             const gradeMap: Record<string, string> = { 'A': 'Excellent', 'B': 'Good', 'C': 'Fair' };
             if (!formData.specs.condition && formData.grade) {
                 formData.specs.condition = gradeMap[formData.grade] || '';
             }
 
-            const { error } = await supabase
-                .from('inventory_items')
-                .insert([formData]);
+            if (editingId) {
+                // UPDATE Existing
+                const { error } = await supabase
+                    .from('inventory_items')
+                    .update({
+                        serial_number: formData.serial_number,
+                        brand: formData.brand,
+                        model: formData.model,
+                        device_type: formData.device_type,
+                        grade: formData.grade,
+                        repair_needed_description: formData.repair_needed_description,
+                        specs: formData.specs,
+                        // Don't update status implicitly on edit, unless we add a status field to form
+                    })
+                    .eq('id', editingId);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('Device Updated Successfully!');
+            } else {
+                // INSERT New
+                const { error } = await supabase
+                    .from('inventory_items')
+                    .insert([formData]);
 
-            setShowAddModal(false);
-            setFormData({
-                serial_number: '',
-                brand: '',
-                model: '',
-                device_type: 'laptop',
-                grade: 'B',
-                repair_needed_description: '',
-                status: 'pending_triage',
-                specs: { ...emptySpecs }
-            });
+                if (error) throw error;
+                alert('Device Registered Successfully!');
+            }
+
+            closeModal();
             fetchInventory();
-            alert('Device Registered Successfully!');
         } catch (err: any) {
-            alert('Error adding device: ' + err.message);
+            alert('Error saving device: ' + err.message);
         }
+    }
+
+    async function handleDelete(id: string) {
+        if (!confirm('Are you sure you want to delete this device? This cannot be undone.')) return;
+        try {
+            const { error } = await supabase.from('inventory_items').delete().eq('id', id);
+            if (error) throw error;
+            setItems(items.filter(i => i.id !== id));
+        } catch (err: any) {
+            alert('Delete failed: ' + err.message);
+        }
+    }
+
+    function handleEdit(item: InventoryItem) {
+        setEditingId(item.id);
+        setFormData({
+            ...item,
+            specs: item.specs || { ...emptySpecs }
+        });
+        setShowAddModal(true);
+    }
+
+    function closeModal() {
+        setShowAddModal(false);
+        setEditingId(null);
+        setFormData({
+            serial_number: '',
+            brand: '',
+            model: '',
+            device_type: 'laptop',
+            grade: 'B',
+            repair_needed_description: '',
+            status: 'pending_triage',
+            specs: { ...emptySpecs }
+        });
     }
 
     const updateSpec = (field: keyof DeviceSpecs, value: string) => {
@@ -213,13 +261,14 @@ export default function Inventory() {
                             <th className="px-4 py-3 text-left font-medium text-gray-500">Specs Summary</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500">Grade / Cond</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-500">Issues</th>
+                            <th className="px-4 py-3 text-center font-medium text-gray-500 no-print">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {loading ? (
-                            <tr><td colSpan={5} className="p-4 text-center">Loading inventory...</td></tr>
+                            <tr><td colSpan={6} className="p-4 text-center">Loading inventory...</td></tr>
                         ) : filteredItems.length === 0 ? (
-                            <tr><td colSpan={5} className="p-4 text-center">No devices found.</td></tr>
+                            <tr><td colSpan={6} className="p-4 text-center">No devices found.</td></tr>
                         ) : filteredItems.map((item) => (
                             <tr key={item.id} className="hover:bg-gray-50 group">
                                 <td className="px-4 py-3 font-mono text-gray-900 align-top">{item.serial_number}</td>
@@ -240,8 +289,8 @@ export default function Inventory() {
                                 </td>
                                 <td className="px-4 py-3 align-top">
                                     <div className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-1 ${item.grade === 'A' ? 'bg-green-100 text-green-800' :
-                                            item.grade === 'B' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-red-100 text-red-800'
+                                        item.grade === 'B' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
                                         }`}>
                                         Grade {item.grade}
                                     </div>
@@ -249,6 +298,16 @@ export default function Inventory() {
                                 </td>
                                 <td className="px-4 py-3 text-gray-500 max-w-xs align-top">
                                     {item.repair_needed_description || <span className="text-green-600 text-xs">No Issues</span>}
+                                </td>
+                                <td className="px-4 py-3 text-center align-top no-print">
+                                    <div className="flex justify-center gap-2">
+                                        <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 text-sm">
+                                            ✏️
+                                        </button>
+                                        <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800 text-sm">
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -261,8 +320,8 @@ export default function Inventory() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 no-print">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
                         <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">Register New Device</h2>
-                            <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                            <h2 className="text-xl font-bold">{editingId ? 'Edit Device Details' : 'Register New Device'}</h2>
+                            <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">✕</button>
                         </div>
 
                         <div className="p-6 overflow-y-auto">
@@ -404,8 +463,10 @@ export default function Inventory() {
                         </div>
 
                         <div className="p-5 border-t bg-gray-50 flex justify-end gap-3">
-                            <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
-                            <button type="submit" form="add-form" className="px-6 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">Register Device</button>
+                            <button type="button" onClick={closeModal} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+                            <button type="submit" form="add-form" className="px-6 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">
+                                {editingId ? 'Save Changes' : 'Register Device'}
+                            </button>
                         </div>
                     </div>
                 </div>

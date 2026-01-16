@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import type { InventoryItem, RepairSession, DeviceSpecs } from '../types';
@@ -10,6 +10,32 @@ export default function Technician() {
     const [activeSession, setActiveSession] = useState<RepairSession | null>(null);
     const [loading, setLoading] = useState(false);
     const [notes, setNotes] = useState('');
+    const [partsAvailable, setPartsAvailable] = useState<InventoryItem[]>([]);
+
+    // Auto-fetch parts when device loads
+    useEffect(() => {
+        if (device) {
+            fetchParts(device.model);
+        } else {
+            setPartsAvailable([]);
+        }
+    }, [device]);
+
+    async function fetchParts(model: string) {
+        // Simple fuzzy match on model name
+        const { data } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .ilike('model', `%${model}%`)
+            .eq('grade', 'C')
+            .neq('id', device?.id); // Don't match self
+
+        if (data && data.length > 0) {
+            setPartsAvailable(data);
+        } else {
+            setPartsAvailable([]);
+        }
+    }
 
     async function handleSearch(e: React.FormEvent) {
         e.preventDefault();
@@ -169,11 +195,35 @@ export default function Technician() {
             {/* Device Details */}
             {device && (
                 <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+
+                    {/* Parts Notification */}
+                    {partsAvailable.length > 0 && (
+                        <div className="bg-purple-50 border-b border-purple-100 p-4">
+                            <div className="flex items-start gap-3">
+                                <span className="text-2xl">🧩</span>
+                                <div>
+                                    <h4 className="font-bold text-purple-900">Parts Available in Inventory</h4>
+                                    <p className="text-sm text-purple-700 mb-2">
+                                        We found <strong>{partsAvailable.length}</strong> Grade C units matching this model ({device.model}).
+                                        They might have the parts you need!
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {partsAvailable.map(p => (
+                                            <span key={p.id} className="bg-white border border-purple-200 text-purple-800 text-xs px-2 py-1 rounded font-mono shadow-sm">
+                                                SN: {p.serial_number}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="p-6 bg-gray-50 border-b flex justify-between items-start">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
                                 <span className={`inline-block px-2 py-1 rounded text-xs font-bold ${device.grade === 'A' ? 'bg-green-100 text-green-800' :
-                                        device.grade === 'B' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                    device.grade === 'B' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                                     }`}>
                                     Grade {device.grade}
                                 </span>
