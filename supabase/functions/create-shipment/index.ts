@@ -106,8 +106,15 @@ serve(async (req) => {
     const responseText = await response.text()
     console.log("CP Create Response Status:", response.status);
     console.log("CP Response Content-Type:", response.headers.get('content-type'));
+    console.log("CP Response Location:", response.headers.get('location'));
     console.log("CP Response Text Length:", responseText.length);
     console.log("CP Response Text (first 500 chars):", responseText.substring(0, 500));
+
+    // Log all headers for debugging
+    console.log("All Response Headers:");
+    response.headers.forEach((value, key) => {
+      console.log(`  ${key}: ${value}`);
+    });
 
     if (!response.ok) {
       console.error("CP Error Body:", responseText);
