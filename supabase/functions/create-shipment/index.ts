@@ -46,6 +46,7 @@ serve(async (req) => {
     <service-code>${order.service_code || 'DOM.EP'}</service-code>
     <settlement-info>
         <paid-by-customer>${CP_CUST_NUM}</paid-by-customer>
+        <intended-method-of-payment>Account</intended-method-of-payment>
     </settlement-info>
     <sender>
       <name>Laptek Exports</name>
