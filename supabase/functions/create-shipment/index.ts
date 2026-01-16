@@ -35,10 +35,13 @@ serve(async (req) => {
     const validRef = (order.reference_number || order.id).substring(0, 30);
     const validPostal = order.postal_code.replace(/\s/g, '').toUpperCase();
 
+    // Shipping Point usually must match the Sender's Postal Code or a valid outlet
+    const shippingPoint = (order.sender_postal_code || 'N0B2J0').replace(/\s/g, '').toUpperCase();
+
     const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
 <shipment xmlns="http://www.canadapost.ca/ws/shipment-v8">
   <group-id>${validGroupId}</group-id>
-  <requested-shipping-point>N0B2J0</requested-shipping-point> 
+  <requested-shipping-point>${shippingPoint}</requested-shipping-point> 
   <delivery-spec>
     <service-code>${order.service_code || 'DOM.EP'}</service-code>
     <sender>
@@ -49,7 +52,7 @@ serve(async (req) => {
         <address-line-1>123 Sender St</address-line-1>
         <city>Puslinch</city>
         <prov-state>ON</prov-state>
-        <postal-zip-code>N0B2J0</postal-zip-code>
+        <postal-zip-code>${shippingPoint}</postal-zip-code>
       </address-details>
     </sender>
     <destination>
