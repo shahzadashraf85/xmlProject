@@ -105,6 +105,9 @@ serve(async (req) => {
 
     const responseText = await response.text()
     console.log("CP Create Response Status:", response.status);
+    console.log("CP Response Content-Type:", response.headers.get('content-type'));
+    console.log("CP Response Text Length:", responseText.length);
+    console.log("CP Response Text (first 500 chars):", responseText.substring(0, 500));
 
     if (!response.ok) {
       console.error("CP Error Body:", responseText);
