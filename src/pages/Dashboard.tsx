@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { parseExcelFile, parseExcelFileWithAI, validateAllRows } from '../utils/excelParser';
 import { applyMapping, REQUIRED_FIELDS } from '../utils/aiMapper';
 import { generateXML, downloadXML, normalizeServiceCode } from '../utils/xmlGenerator';
