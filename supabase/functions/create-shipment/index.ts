@@ -98,7 +98,7 @@ serve(async (req) => {
       headers: {
         'Authorization': 'Basic ' + btoa(CP_USER + ':' + CP_PASS),
         'Content-Type': 'application/vnd.cpc.shipment-v8+xml',
-        'Accept': 'application/vnd.cpc.shipment-v8+xml'
+        'Accept': 'application/vnd.cpc.shipment-v8+xml, application/xml, text/xml, */*'
       },
       body: xmlBody
     })
