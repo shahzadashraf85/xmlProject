@@ -120,21 +120,26 @@ serve(async (req) => {
     }
 
     // 4. Extract Tracking PIN & Label Link
-    // Correct tag is <tracking-pin>, but fallback to <pin> just in case
-    const pinMatch = responseText.match(/<tracking-pin>(.*?)<\/tracking-pin>/) || responseText.match(/<pin>(.*?)<\/pin>/);
-    const linkMatch = responseText.match(/<link rel="label" href="(.*?)"/) || responseText.match(/<link href="(.*?)" rel="label"/);
+    // Use [\s\S]*? to match across newlines if formatted pretty
+    const pinMatch = responseText.match(/<tracking-pin\b[^>]*>([\s\S]*?)<\/tracking-pin>/)
+      || responseText.match(/<pin\b[^>]*>([\s\S]*?)<\/pin>/);
 
-    const trackingPin = pinMatch ? pinMatch[1] : null;
+    // Also try to get shipment-id as a fallback identifier
+    const idMatch = responseText.match(/<shipment-id\b[^>]*>([\s\S]*?)<\/shipment-id>/);
+
+    const linkMatch = responseText.match(/<link\b[^>]*rel="label"[^>]*href="([^"]*)"/)
+      || responseText.match(/<link\b[^>]*href="([^"]*)"[^>]*rel="label"/);
+
+    const trackingPin = pinMatch ? pinMatch[1].trim() : (idMatch ? idMatch[1].trim() : null);
     const labelUrl = linkMatch ? linkMatch[1] : null;
 
     if (!trackingPin) {
       console.error("Failed to parse tracking pin from success response:", responseText);
-      // FORCE ERROR so frontend shows the XML
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Parsing Error: " + responseText.substring(0, 800), // SHOW ME THE XML!
-          details: responseText
+          error: "XML Parsing Failed. Raw Response below:",
+          details: responseText // Return raw text for debugging
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
