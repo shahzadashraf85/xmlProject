@@ -44,6 +44,9 @@ serve(async (req) => {
   <requested-shipping-point>${shippingPoint}</requested-shipping-point> 
   <delivery-spec>
     <service-code>${order.service_code || 'DOM.EP'}</service-code>
+    <settlement-info>
+        <paid-by-customer>${CP_CUST_NUM}</paid-by-customer>
+    </settlement-info>
     <sender>
       <name>Laptek Exports</name>
       <company>Laptek Exports</company>
