@@ -40,6 +40,27 @@ export interface GeneratorSettings {
     signatureThreshold: number;
 }
 
+export interface InventoryItem {
+    id: string;
+    serial_number: string;
+    brand: string;
+    model: string;
+    specifications?: string;
+    grade: 'A' | 'B' | 'C';
+    repair_needed_description?: string;
+    status: 'pending_triage' | 'in_repair' | 'ready_to_ship' | 'scrapped';
+    created_at: string;
+}
+
+export interface RepairSession {
+    id: string;
+    inventory_id: string;
+    technician_id: string;
+    started_at: string;
+    ended_at?: string;
+    work_notes?: string;
+}
+
 export const DEFAULT_SETTINGS: GeneratorSettings = {
     signatureThreshold: 100,
 };
