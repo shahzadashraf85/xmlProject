@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchMiraklMessages, markMessageAsRead, replyToMessage, fetchMessageThread, generateAiReply, type MiraklMessage } from '../utils/miraklApi';
+import { fetchMiraklMessages, markMessageAsRead, replyToMessage, fetchMessageThread, generateAiReply, fetchLocalReadStates, saveLocalReadState, type MiraklMessage } from '../utils/miraklApi';
 
 export default function Messages() {
     const [messages, setMessages] = useState<MiraklMessage[]>([]);
@@ -14,7 +14,16 @@ export default function Messages() {
     const [activeTab, setActiveTab] = useState<'all' | 'unread'>('all');
     const [totalCount, setTotalCount] = useState(0);
 
-    // ... (rest of the file until the Reply section)
+    function formatDate(dateString: string) {
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(date);
+    }
 
     async function handleGenerateAiReply() {
         if (!selectedMessage) return;
@@ -33,10 +42,6 @@ export default function Messages() {
         }
     }
 
-    // ... (rendering code)
-
-
-
     useEffect(() => {
         loadMessages();
     }, [activeTab]);
@@ -53,15 +58,22 @@ export default function Messages() {
 
             // Group messages by order_id to show only one conversation per order
             const allMessages = response.messages || [];
+
+            // SYNC: Fetch Read Statuses from Database
+            const allMessageIds = allMessages.map(m => String(m.id));
+            const dbReadAndVerified = await fetchLocalReadStates(allMessageIds);
+
             const uniqueConversationsMap = new Map();
 
             allMessages.forEach(msg => {
                 // Use order_id as key. If not available, fall back to id (legacy)
                 const key = msg.order_id || msg.id;
 
-                // CHECK LOCAL STORAGE FOR READ STATUS (Fix for API failure)
+                // CHECK LOCAL STORAGE AND DATABASE
                 const localReadIds = JSON.parse(localStorage.getItem('mirakl_read_messages') || '[]');
-                if (localReadIds.includes(String(msg.id))) {
+                const isReadInDb = dbReadAndVerified.includes(String(msg.id));
+
+                if (localReadIds.includes(String(msg.id)) || isReadInDb) {
                     msg.read = true;
                     msg.unread = false;
                 }
@@ -129,6 +141,9 @@ export default function Messages() {
                 localStorage.setItem('mirakl_read_messages', JSON.stringify(localReadIds));
             }
 
+            // SAVE TO DATABASE
+            saveLocalReadState(String(message.id));
+
             try {
                 await markMessageAsRead(String(message.id));
             } catch (err) {
@@ -154,97 +169,34 @@ export default function Messages() {
         }
     }
 
-    function formatDate(dateString: string) {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(date);
-    }
-
     return (
-        <div className="h-full bg-gray-50">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Mirakl Messages</h1>
-                        <p className="text-sm text-gray-500 mt-1">Best Buy Seller Messages</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center bg-gray-100 rounded-lg p-1 mr-4">
-                            <button
-                                onClick={() => setActiveTab('all')}
-                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'all'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                            >
-                                All
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('unread')}
-                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'unread'
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                            >
-                                Unread
-                            </button>
-                        </div>
-                        <button
-                            onClick={loadMessages}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                        >
-                            <span>🔄</span>
-                            Refresh
-                        </button>
-                    </div>
+        <div className="flex h-[calc(100vh-64px)] bg-gray-50 text-left">
+            {/* LEFT PANEL: Message List */}
+            <div className="w-1/4 bg-white border-r border-gray-200 flex flex-col min-w-[300px]">
+                <div className="p-4 border-b border-gray-200">
+                    <h1 className="text-xl font-bold text-gray-900">Mirakl Messages</h1>
+                    <p className="text-xs text-gray-500 mt-1">Best Buy Seller Messages</p>
+                    {totalCount > 0 && (
+                        <p className="text-xs text-gray-400 mt-2">
+                            Showing {messages.length} of {totalCount} messages
+                        </p>
+                    )}
                 </div>
-                {totalCount > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                        Showing {messages.length} of {totalCount} messages
-                    </p>
-                )}
-            </div>
 
-            <div className="flex h-[calc(100vh-140px)]">
-                {/* Left Panel - Messages List */}
-                <div className="w-1/4 bg-white border-r border-gray-200 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto">
                     {loading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <div className="text-center">
-                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                                <p className="text-gray-500 mt-4">Loading messages...</p>
-                            </div>
+                        <div className="flex items-center justify-center h-32">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         </div>
                     ) : error ? (
-                        <div className="p-6">
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                <div className="flex items-start gap-3">
-                                    <span className="text-2xl">⚠️</span>
-                                    <div>
-                                        <h3 className="font-semibold text-red-900">Error Loading Messages</h3>
-                                        <p className="text-sm text-red-700 mt-1">{error}</p>
-                                        <button
-                                            onClick={loadMessages}
-                                            className="mt-3 text-sm text-red-600 hover:text-red-800 underline"
-                                        >
-                                            Try again
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="p-4 text-center">
+                            <p className="text-sm text-red-600">{error}</p>
+                            <button onClick={loadMessages} className="text-xs text-blue-600 underline mt-2">Try again</button>
                         </div>
                     ) : messages.length === 0 ? (
-                        <div className="flex items-center justify-center h-64">
-                            <div className="text-center">
-                                <span className="text-6xl">📭</span>
-                                <p className="text-gray-500 mt-4">No messages found</p>
-                            </div>
+                        <div className="p-8 text-center text-gray-500">
+                            <span className="text-4xl block mb-2">📭</span>
+                            No messages found
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-200">
@@ -252,215 +204,182 @@ export default function Messages() {
                                 <div
                                     key={message.id}
                                     onClick={() => handleMessageClick(message)}
-                                    className={`p-4 cursor-pointer transition-colors ${selectedMessage?.id === message.id
-                                        ? 'bg-blue-50 border-l-4 border-blue-600'
-                                        : 'hover:bg-gray-50'
+                                    className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 ${selectedMessage?.id === message.id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
                                         } ${(message.unread || !message.read) ? 'bg-blue-50/30' : ''}`}
                                 >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                {(message.unread || !message.read) && (
-                                                    <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                                                )}
-                                                <h3 className={`text-sm truncate ${(message.unread || !message.read) ? 'font-bold text-gray-900' : 'font-medium text-gray-700'
-                                                    }`}>
-                                                    {message.subject}
-                                                </h3>
-                                            </div>
-
-                                            {/* Order and Customer Info */}
-                                            <div className="mt-2 space-y-1">
-                                                {message.order_id && (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-semibold text-blue-600">📦</span>
-                                                        <span className="text-xs text-gray-600">
-                                                            Order: <span className="font-medium text-gray-900">{message.order_id}</span>
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                {message.from_name && (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-semibold text-green-600">👤</span>
-                                                        <span className="text-xs text-gray-600">
-                                                            Customer: <span className="font-medium text-gray-900">{message.from_name}</span>
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                                                {message.body}
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-2">
-                                                <span className="text-xs text-gray-400">
-                                                    {formatDate(message.date_created)}
-                                                </span>
-                                            </div>
-                                        </div>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className={`text-sm truncate pr-2 ${message.unread || !message.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                                            {message.subject}
+                                        </h3>
+                                        {/* Status Dot */}
+                                        {(message.unread || !message.read) && (
+                                            <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></span>
+                                        )}
                                     </div>
+
+                                    {/* Order/Customer Snippet */}
+                                    <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                                        <span className="font-medium text-gray-700">{message.order_id || 'No Order ID'}</span>
+                                        <span>•</span>
+                                        <span className="truncate max-w-[100px]">{message.from_name || 'Customer'}</span>
+                                    </div>
+
+                                    <p className="text-xs text-gray-400 mb-1 line-clamp-1">{message.body}</p>
+                                    <span className="text-[10px] text-gray-400">{formatDate(message.date_created)}</span>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
+            </div>
 
-                {/* Middle Panel - Message Content and Reply */}
-                <div className="flex-1 bg-white overflow-y-auto">
-                    {selectedMessage ? (
-                        <div className="h-full flex flex-col">
-                            {/* Message Header */}
-                            <div className="border-b border-gray-200 p-6">
-                                <h2 className="text-xl font-bold text-gray-900">{selectedMessage.subject}</h2>
-                            </div>
+            {/* MIDDLE PANEL: Thread & Reply */}
+            <div className="flex-1 bg-white flex flex-col border-r border-gray-200 min-w-[400px]">
+                {selectedMessage ? (
+                    <>
+                        {/* Header */}
+                        <div className="p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-900">{selectedMessage.subject}</h2>
+                        </div>
 
-                            {/* Message Thread */}
-                            <div className="flex-1 p-6 overflow-y-auto">
-                                {loadingThread ? (
-                                    <div className="flex items-center justify-center h-32">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                    </div>
-                                ) : messageThread.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {messageThread.map((msg, idx) => {
-                                            const isFromCustomer = msg.from_type === 'CUSTOMER' || msg.from?.type === 'CUSTOMER';
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className={`flex ${isFromCustomer ? 'justify-start' : 'justify-end'}`}
-                                                >
-                                                    <div className={`max-w-[80%] rounded-lg p-4 ${isFromCustomer
-                                                        ? 'bg-gray-100 text-gray-900'
-                                                        : 'bg-blue-600 text-white'
-                                                        }`}>
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="text-xs font-semibold">
-                                                                {msg.from_name || msg.from?.type || 'Unknown'}
-                                                            </span>
-                                                            <span className={`text-xs ${isFromCustomer ? 'text-gray-500' : 'text-blue-100'}`}>
-                                                                {formatDate(msg.date_created)}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                        {/* Thread */}
+                        <div className="flex-1 p-6 overflow-y-auto bg-white">
+                            {loadingThread ? (
+                                <div className="flex justify-center p-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                </div>
+                            ) : messageThread.length > 0 ? (
+                                <div className="space-y-6">
+                                    {messageThread.map((msg, idx) => {
+                                        const isFromCustomer = msg.from_type === 'CUSTOMER' || msg.from?.type === 'CUSTOMER';
+                                        return (
+                                            <div key={idx} className={`flex ${isFromCustomer ? 'justify-start' : 'justify-end'}`}>
+                                                <div className={`max-w-[85%] rounded-lg p-4 shadow-sm ${isFromCustomer ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white'
+                                                    }`}>
+                                                    <div className="flex items-center gap-2 mb-2 text-xs opacity-80 font-medium">
+                                                        <span>{msg.from_name || (isFromCustomer ? 'Customer' : 'You')}</span>
+                                                        <span>•</span>
+                                                        <span>{formatDate(msg.date_created)}</span>
                                                     </div>
+                                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.body}</p>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="prose max-w-none">
-                                        <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap">
-                                            {selectedMessage.body}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap text-sm text-gray-700">
+                                    {selectedMessage.body}
+                                </div>
+                            )}
+                        </div>
 
-                            {/* Reply Section */}
-                            <div className="border-t border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-sm font-semibold text-gray-700">Reply</h3>
-                                    <button
-                                        onClick={handleGenerateAiReply}
-                                        disabled={generatingReply}
-                                        className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-xs font-medium flex items-center gap-1 transition-colors"
-                                    >
-                                        {generatingReply ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-700"></div>
-                                                Generating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span>✨</span>
-                                                Generate AI Reply
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                                <textarea
-                                    value={replyText}
-                                    onChange={(e) => setReplyText(e.target.value)}
-                                    placeholder="Type your reply here..."
-                                    className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                />
-                                <div className="flex justify-end mt-3">
-                                    <button
-                                        onClick={handleSendReply}
-                                        disabled={!replyText.trim() || sendingReply}
-                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        {sendingReply ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                Sending...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span>📤</span>
-                                                Send Reply
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
+                        {/* Reply Box */}
+                        <div className="p-6 border-t border-gray-200 bg-gray-50">
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-sm font-semibold text-gray-700">Reply</span>
+                                <button
+                                    onClick={handleGenerateAiReply}
+                                    disabled={generatingReply}
+                                    className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 text-xs font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+                                >
+                                    {generatingReply ? 'Generating...' : '✨ AI Suggestion'}
+                                </button>
+                            </div>
+                            <textarea
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-none mb-3"
+                                placeholder="Type your reply here..."
+                            />
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={handleSendReply}
+                                    disabled={!replyText.trim() || sendingReply}
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {sendingReply ? 'Sending...' : 'Send Reply'}
+                                </button>
                             </div>
                         </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="text-center">
-                                <span className="text-6xl">💬</span>
-                                <p className="text-gray-500 mt-4">Select a message to view details</p>
-                            </div>
+                    </>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                        <div className="text-center">
+                            <span className="text-6xl block mb-4">💬</span>
+                            <p>Select a conversation to start</p>
                         </div>
-                    )}
+                    </div>
+                )}
+            </div>
+
+            {/* RIGHT PANEL: Details & Controls */}
+            <div className="w-[320px] bg-gray-50 border-l border-gray-200 flex flex-col flex-shrink-0">
+                {/* CONTROLS HEADER */}
+                <div className="p-4 bg-white border-b border-gray-200 flex justify-end gap-3 sticky top-0 z-10">
+                    <div className="flex bg-gray-100 p-1 rounded-md">
+                        <button
+                            onClick={() => setActiveTab('all')}
+                            className={`px-3 py-1 text-xs font-medium rounded ${activeTab === 'all' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            All
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('unread')}
+                            className={`px-3 py-1 text-xs font-medium rounded ${activeTab === 'unread' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            Unread
+                        </button>
+                    </div>
+                    <button
+                        onClick={loadMessages}
+                        className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    >
+                        <span>🔄</span> Refresh
+                    </button>
                 </div>
 
-                {/* Right Panel - Order Details Sidebar */}
-                <div className="w-1/4 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+                {/* DETAILS */}
+                <div className="flex-1 overflow-y-auto p-6">
                     {selectedMessage ? (
-                        <div className="p-6">
-                            <h3 className="text-sm font-bold text-gray-900 uppercase mb-4">Order Details</h3>
-
-                            <div className="space-y-4">
+                        <div>
+                            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-6">Order Details</h3>
+                            <div className="space-y-6">
                                 {selectedMessage.order_id && (
                                     <div>
-                                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Order ID</span>
-                                        <p className="text-base font-medium text-gray-900">{selectedMessage.order_id}</p>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Order ID</label>
+                                        <p className="text-sm font-medium text-gray-900 font-mono select-all bg-white p-2 border rounded border-gray-200">{selectedMessage.order_id}</p>
                                     </div>
                                 )}
                                 {selectedMessage.commercial_id && (
                                     <div>
-                                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Commercial ID</span>
-                                        <p className="text-base font-medium text-gray-900">{selectedMessage.commercial_id}</p>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Commercial ID</label>
+                                        <p className="text-sm font-medium text-gray-900 font-mono">{selectedMessage.commercial_id}</p>
                                     </div>
                                 )}
                                 {selectedMessage.from_name && (
                                     <div>
-                                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Customer Name</span>
-                                        <p className="text-base font-medium text-gray-900">{selectedMessage.from_name}</p>
-                                    </div>
-                                )}
-                                {selectedMessage.from_type && (
-                                    <div>
-                                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Sender Type</span>
-                                        <p className="text-base font-medium text-gray-900">{selectedMessage.from_type}</p>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Customer Name</label>
+                                        <p className="text-sm font-medium text-gray-900">{selectedMessage.from_name}</p>
                                     </div>
                                 )}
                                 <div>
-                                    <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">Date</span>
-                                    <p className="text-base font-medium text-gray-900">{formatDate(selectedMessage.date_created)}</p>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Date</label>
+                                    <p className="text-sm font-medium text-gray-900">{formatDate(selectedMessage.date_created)}</p>
                                 </div>
                                 {selectedMessage.to_shop_name && (
                                     <div>
-                                        <span className="text-xs font-semibold text-gray-500 uppercase block mb-1">To Shop</span>
-                                        <p className="text-base font-medium text-gray-900">{selectedMessage.to_shop_name}</p>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">To Shop</label>
+                                        <p className="text-sm font-medium text-gray-900">{selectedMessage.to_shop_name}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center h-full p-6">
-                            <p className="text-sm text-gray-500 text-center">Select a message to view order details</p>
+                        <div className="text-center text-gray-400 mt-10 text-xs">
+                            Select a message to view details
                         </div>
                     )}
                 </div>

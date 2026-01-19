@@ -247,3 +247,57 @@ export async function generateAiReply(messages: MiraklMessage[]): Promise<string
         throw error;
     }
 }
+/**
+ * Fetch local read states for a list of message IDs from Supabase DB
+ * This acts as a fallback/overlay since the Mirakl API read status is unreliable
+ */
+export async function fetchLocalReadStates(messageIds: string[]): Promise<string[]> {
+    if (messageIds.length === 0) return [];
+
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('message_states')
+            .select('mirakl_message_id')
+            .eq('user_id', user.id)
+            .eq('is_read', true)
+            .in('mirakl_message_id', messageIds);
+
+        if (error) {
+            console.error('Error fetching local read states:', error);
+            return [];
+        }
+
+        return data.map(row => row.mirakl_message_id);
+    } catch (err) {
+        console.error('Error in fetchLocalReadStates:', err);
+        return [];
+    }
+}
+
+/**
+ * Save read state to Supabase DB
+ */
+export async function saveLocalReadState(messageId: string): Promise<void> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { error } = await supabase
+            .from('message_states')
+            .upsert({
+                user_id: user.id,
+                mirakl_message_id: messageId,
+                is_read: true,
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'user_id,mirakl_message_id'
+            });
+
+        if (error) throw error;
+    } catch (err) {
+        console.error('Error saving local read state:', err);
+    }
+}
