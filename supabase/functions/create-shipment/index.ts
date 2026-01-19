@@ -93,6 +93,8 @@ serve(async (req) => {
 
     // 3. Call Canada Post API
     // Standard Format: POST /rs/{mailed-by}/shipment
+    console.log("Making request to Canada Post API. Environment:", CP_ENV, "URL:", `${CP_API_URL}/${CP_CUST_NUM}/shipment`);
+
     const response = await fetch(`${CP_API_URL}/${CP_CUST_NUM}/shipment`, {
       method: 'POST',
       headers: {

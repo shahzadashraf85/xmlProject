@@ -21,6 +21,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         { name: 'History', path: '/history', icon: '📜' },
         { name: 'Inventory Manager', path: '/inventory', icon: '💻' },
         { name: 'Technician Mode', path: '/technician', icon: '🔧' },
+        { name: 'Messages', path: '/messages', icon: '📧' },
     ];
 
     return (
@@ -42,8 +43,8 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                                        ? 'bg-blue-600 text-white shadow-md'
-                                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                                     }`}
                             >
                                 <span className="text-xl">{item.icon}</span>

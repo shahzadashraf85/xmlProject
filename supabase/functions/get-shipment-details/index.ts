@@ -46,6 +46,8 @@ serve(async (req) => {
 
         const xmlText = await response.text();
         console.log(`CP Status: ${response.status} in ${CP_ENV}`);
+        console.log(`CP Response Length: ${xmlText.length}`);
+        console.log(`CP Response XML (first 1000 chars):`, xmlText.substring(0, 1000));
 
         if (!response.ok) {
             // Return detailed error for debugging

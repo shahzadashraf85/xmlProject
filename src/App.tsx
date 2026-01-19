@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import Inventory from './pages/Inventory';
 import Technician from './pages/Technician';
+import Messages from './pages/Messages';
 
 function App() {
   return (
@@ -54,6 +55,17 @@ function App() {
               <ProtectedRoute>
                 <SidebarLayout>
                   <Technician />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <Messages />
                 </SidebarLayout>
               </ProtectedRoute>
             }
