@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -10,6 +11,28 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const { signIn, signUp } = useAuth();
     const navigate = useNavigate();
+
+    // Auto-login from script parameters
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+            setLoading(true);
+            supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+            }).then(({ error }: any) => {
+                if (!error) {
+                    navigate('/register');
+                } else {
+                    setError('Auto-login failed. Please sign in manually.');
+                }
+                setLoading(false);
+            });
+        }
+    }, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();

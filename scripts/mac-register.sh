@@ -13,8 +13,38 @@ echo "========================================"
 echo ""
 
 # Configuration
-API_URL="https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device"
+# Configuration
+SUPABASE_URL="https://xqsatwytjzvlhdmckfsb.supabase.co"
+API_URL="${SUPABASE_URL}/functions/v1/register-device"
 API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
+
+# --- AUTHENTICATION ---
+echo "🔒 AUTHENTICATION REQUIRED"
+echo "Please enter your LapTek credentials to proceed."
+read -p "Email: " AUTH_EMAIL
+read -s -p "Password: " AUTH_PASSWORD
+echo ""
+echo ""
+
+echo "Authenticating..."
+AUTH_RESPONSE=$(curl -s -X POST "${SUPABASE_URL}/auth/v1/token?grant_type=password" \
+  -H "apikey: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$AUTH_EMAIL\",\"password\":\"$AUTH_PASSWORD\"}")
+
+# Extract Access Token (Simple grep hack to avoid jq dependency)
+ACCESS_TOKEN=$(echo "$AUTH_RESPONSE" | grep -o '"access_token":"[^"]*' | grep -o '[^"]*$')
+REFRESH_TOKEN=$(echo "$AUTH_RESPONSE" | grep -o '"refresh_token":"[^"]*' | grep -o '[^"]*$')
+
+if [[ -z "$ACCESS_TOKEN" ]]; then
+    echo "❌ Authentication Failed!"
+    echo "Check your email/password and try again."
+    # echo "Debug: $AUTH_RESPONSE"
+    exit 1
+fi
+
+echo "✅ Authenticated as $AUTH_EMAIL"
+echo ""
 
 echo "Scanning detailed hardware specs..."
 echo "(This may take a few seconds)"
@@ -155,11 +185,11 @@ EOF
 echo "Uploading to LapTek Inventory..."
 echo ""
 
-# Send to API
+# Send to API (Using the authenticated token)
 HTTP_CODE=$(curl -s -o /tmp/laptek_response.txt -w "%{http_code}" \
   -X POST "$API_URL" \
   -H "apikey: $API_KEY" \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
   -d "$JSON_PAYLOAD")
 
@@ -172,8 +202,8 @@ if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
     echo "Device registered: $SERIAL"
     echo ""
     
-    # Open in browser
-    OPEN_URL="https://xmlproject.vercel.app/inventory?search=$SERIAL"
+    # Open in browser with auto-login tokens
+    OPEN_URL="https://xmlproject.vercel.app/inventory?search=$SERIAL&access_token=$ACCESS_TOKEN&refresh_token=$REFRESH_TOKEN"
     echo "Opening in browser..."
     if [[ "$OSTYPE" == "darwin"* ]]; then
         open "$OPEN_URL"

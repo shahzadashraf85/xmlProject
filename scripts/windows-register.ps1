@@ -7,8 +7,54 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Configuration
-$API_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device"
-$API_KEY = "YOUR_SUPABASE_ANON_KEY_HERE"  # Replace with your actual key
+$SUPABASE_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co"
+$API_URL = "$SUPABASE_URL/functions/v1/register-device"
+$API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
+
+# --- AUTHENTICATION ---
+Write-Host "Locked: AUTHENTICATION REQUIRED" -ForegroundColor Yellow
+Write-Host "Please enter your LapTek credentials to proceed." -ForegroundColor White
+$authEmail = Read-Host "Email"
+$authPassword = Read-Host "Password" -AsSecureString
+# Convert SecureString back to plain text for the API call (safe in memory for this transient use)
+$BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($authPassword)
+$plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
+
+Write-Host ""
+Write-Host "Authenticating..." -ForegroundColor Gray
+
+try {
+    $authPayload = @{
+        email = $authEmail
+        password = $plainPassword
+    } | ConvertTo-Json
+
+    $authHeaders = @{
+        "apikey" = $API_KEY
+        "Content-Type" = "application/json"
+    }
+
+    $authResponse = Invoke-RestMethod -Uri "$SUPABASE_URL/auth/v1/token?grant_type=password" -Method POST -Headers $authHeaders -Body $authPayload -ErrorAction Stop
+    $accessToken = $authResponse.access_token
+    $refreshToken = $authResponse.refresh_token
+
+    if (-not $accessToken) {
+        throw "No access token received."
+    }
+
+    Write-Host "✓ Authenticated as $authEmail" -ForegroundColor Green
+    Write-Host ""
+
+} catch {
+    Write-Host "✗ Authentication Failed!" -ForegroundColor Red
+    Write-Host "Check your email/password and try again." -ForegroundColor Yellow
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Press any key to exit..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
 
 Write-Host "Detecting hardware specifications..." -ForegroundColor Yellow
 
@@ -63,10 +109,10 @@ try {
 
     Write-Host "Uploading to LapTek Inventory System..." -ForegroundColor Yellow
 
-    # Send to API
+    # Send to API using the Authenticated Token
     $headers = @{
         "apikey" = $API_KEY
-        "Authorization" = "Bearer $API_KEY"
+        "Authorization" = "Bearer $accessToken"
         "Content-Type" = "application/json"
     }
 
@@ -81,6 +127,11 @@ try {
     Write-Host "Serial Number: $serialNumber" -ForegroundColor Cyan
     Write-Host ""
 
+    # Auto-Login to Web App
+    $openUrl = "https://xmlproject.vercel.app/inventory?search=$serialNumber&access_token=$accessToken&refresh_token=$refreshToken"
+    Write-Host "Opening web dashboard..." -ForegroundColor Yellow
+    Start-Process $openUrl
+
 } catch {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Red
@@ -91,8 +142,8 @@ try {
     Write-Host ""
     Write-Host "Please check:" -ForegroundColor Yellow
     Write-Host "  1. Internet connection is active" -ForegroundColor White
-    Write-Host "  2. API_KEY is configured in the script" -ForegroundColor White
-    Write-Host "  3. Supabase Edge Function is deployed" -ForegroundColor White
+    Write-Host "  2. You have valid credentials" -ForegroundColor White
+    Write-Host "  3. This device isn't already registered" -ForegroundColor White
     Write-Host ""
 }
 

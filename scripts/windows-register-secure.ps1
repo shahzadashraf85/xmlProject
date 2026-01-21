@@ -8,23 +8,9 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Configuration
-$API_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device"
-
-# SECURITY: API Key from Environment Variable (safer than hardcoding)
-$API_KEY = $env:LAPTEK_API_KEY
-if (-not $API_KEY) {
-    Write-Host "ERROR: API Key not found!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Please set the environment variable first:" -ForegroundColor Yellow
-    Write-Host '  $env:LAPTEK_API_KEY = "your-key-here"' -ForegroundColor White
-    Write-Host ""
-    Write-Host "Or run this script with:" -ForegroundColor Yellow
-    Write-Host '  $env:LAPTEK_API_KEY="your-key"; .\windows-register.ps1' -ForegroundColor White
-    Write-Host ""
-    Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit 1
-}
+$SUPABASE_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co"
+$API_URL = "$SUPABASE_URL/functions/v1/register-device"
+$API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
 
 # SECURITY: Require Technician PIN
 Write-Host "Enter Technician PIN (4 digits): " -NoNewline -ForegroundColor Yellow
@@ -44,8 +30,53 @@ if ($technicianPin -ne $VALID_PIN) {
     exit 1
 }
 
-Write-Host "✓ Authenticated" -ForegroundColor Green
+Write-Host "✓ PIN Accepted" -ForegroundColor Green
 Write-Host ""
+
+# --- AUTHENTICATION ---
+Write-Host "LOcked: AUTHENTICATION REQUIRED" -ForegroundColor Yellow
+Write-Host "Please enter your LapTek credentials to proceed." -ForegroundColor White
+$authEmail = Read-Host "Email"
+$authPassword = Read-Host "Password" -AsSecureString
+# Convert SecureString back to plain text for the API call
+$BSTR_PASS = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($authPassword)
+$plainPassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR_PASS)
+[System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR_PASS)
+
+Write-Host ""
+Write-Host "Authenticating..." -ForegroundColor Gray
+
+try {
+    $authPayload = @{
+        email = $authEmail
+        password = $plainPassword
+    } | ConvertTo-Json
+
+    $authHeaders = @{
+        "apikey" = $API_KEY
+        "Content-Type" = "application/json"
+    }
+
+    $authResponse = Invoke-RestMethod -Uri "$SUPABASE_URL/auth/v1/token?grant_type=password" -Method POST -Headers $authHeaders -Body $authPayload -ErrorAction Stop
+    $accessToken = $authResponse.access_token
+    $refreshToken = $authResponse.refresh_token
+
+    if (-not $accessToken) {
+        throw "No access token received."
+    }
+
+    Write-Host "✓ Authenticated as $authEmail" -ForegroundColor Green
+    Write-Host ""
+
+} catch {
+    Write-Host "✗ Authentication Failed!" -ForegroundColor Red
+    Write-Host "Check your email/password and try again." -ForegroundColor Yellow
+    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Press any key to exit..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
 Write-Host "Detecting hardware specifications..." -ForegroundColor Yellow
 
 try {
@@ -131,10 +162,10 @@ try {
     Write-Host ""
     Write-Host "Uploading to LapTek Inventory System..." -ForegroundColor Yellow
 
-    # Send to API
+    # Send to API using the Authenticated Token
     $headers = @{
         "apikey" = $API_KEY
-        "Authorization" = "Bearer $API_KEY"
+        "Authorization" = "Bearer $accessToken"
         "Content-Type" = "application/json"
     }
 
@@ -152,7 +183,16 @@ try {
 
     # SECURITY: Log to local file for audit trail
     $logEntry = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') | $serialNumber | $model | $username | SUCCESS"
-    Add-Content -Path "$env:TEMP\laptek-registration.log" -Value $logEntry
+    try {
+        Add-Content -Path "$env:TEMP\laptek-registration.log" -Value $logEntry
+    } catch {
+        Write-Host "Warning: Could not write to log file." -ForegroundColor Gray
+    }
+
+    # Auto-Login to Web App
+    $openUrl = "https://xmlproject.vercel.app/inventory?search=$serialNumber&access_token=$accessToken&refresh_token=$refreshToken"
+    Write-Host "Opening web dashboard..." -ForegroundColor Yellow
+    Start-Process $openUrl
 
 } catch {
     Write-Host ""
