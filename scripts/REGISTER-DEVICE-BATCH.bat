@@ -44,8 +44,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-:: Extract access token using inline PowerShell
+:: Extract access & refresh tokens using inline PowerShell
 for /f "tokens=*" %%a in ('powershell -Command "(Get-Content '%RESPFILE%' | ConvertFrom-Json).access_token"') do set ACCESS_TOKEN=%%a
+for /f "tokens=*" %%a in ('powershell -Command "(Get-Content '%RESPFILE%' | ConvertFrom-Json).refresh_token"') do set REFRESH_TOKEN=%%a
 
 echo Authentication successful!
 echo.
@@ -229,7 +230,7 @@ echo }
 echo Uploading to LapTek Inventory System...
 
 :: Register device
-curl -s -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
+curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Authorization: Bearer %ACCESS_TOKEN%" ^
   -H "Content-Type: application/json" ^
@@ -253,7 +254,7 @@ if not errorlevel 1 (
     echo Serial Number: %SERIAL%
     echo.
     echo Opening web dashboard...
-    start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%"
+    start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
 )
 
 :: Cleanup
