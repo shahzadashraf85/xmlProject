@@ -39,7 +39,6 @@ export default function Inventory() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterGrade, setFilterGrade] = useState('all');
-    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
     useEffect(() => {
         loadInventory();
