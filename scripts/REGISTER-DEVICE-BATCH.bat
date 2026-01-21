@@ -54,105 +54,71 @@ echo Detecting hardware specifications...
 echo (Switching to PowerShell scanning engine for better reliability...)
 echo.
 
-:: --- HARDWARE DETECTION (PowerShell Hybrid) ---
+:: --- FAST HARDWARE DETECTION (Single Pass) ---
 
-:: Get Serial
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_BIOS).SerialNumber"') do set SERIAL=%%a
-if "%SERIAL%"=="" set SERIAL=Unknown
+set SPECS_SCRIPT=%TEMP%\laptek_specs.ps1
+set SPECS_OUT=%TEMP%\laptek_specs.txt
 
-:: Get Brand
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_ComputerSystem).Manufacturer"') do set BRAND=%%a
-if "%BRAND%"=="" set BRAND=Unknown
+:: Create the PowerShell scanner script
+(
+echo $ErrorActionPreference = 'SilentlyContinue'
+echo $bios = Get-CimInstance Win32_BIOS
+echo $cs = Get-CimInstance Win32_ComputerSystem
+echo $cpu = Get-CimInstance Win32_Processor
+echo $disk = Get-CimInstance Win32_DiskDrive ^| Select-Object -First 1
+echo $os = Get-CimInstance Win32_OperatingSystem
+echo $gpu = Get-CimInstance Win32_VideoController ^| Select-Object -First 1
+echo $net = Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEnabled -eq $true} ^| Select-Object -First 1
+echo $mem = Get-CimInstance Win32_PhysicalMemory ^| Select-Object -First 1
+echo.
+echo "SERIAL=" + $bios.SerialNumber
+echo "BRAND=" + $cs.Manufacturer
+echo "MODEL=" + $cs.Model
+echo "CPU=" + $cpu.Name
+echo "CPU_CORES=" + $cpu.NumberOfCores
+echo "CPU_THREADS=" + $cpu.NumberOfLogicalProcessors
+echo "CPU_SPEED=" + $cpu.MaxClockSpeed
+echo "RAM_GB=" + [math]::Round^($cs.TotalPhysicalMemory / 1GB^)
+echo "DISK_GB=" + [math]::Round^($disk.Size / 1GB^)
+echo "DISK_MODEL=" + $disk.Model
+echo "OS_NAME=" + $os.Caption
+echo "OS_VERSION=" + $os.Version
+echo "OS_BUILD=" + $os.BuildNumber
+echo "OS_ARCH=" + $os.OSArchitecture
+echo "GPU=" + $gpu.Name
+echo "GPU_RAM=" + [math]::Round^($gpu.AdapterRAM / 1MB^)
+echo "RESOLUTION=" + $gpu.CurrentHorizontalResolution + "x" + $gpu.CurrentVerticalResolution
+echo "MAC_ADDR=" + $net.MACAddress
+echo.
+echo # RAM Type Logic
+echo switch^($mem.SMBIOSMemoryType^){20{"RAM_TYPE=DDR"} 21{"RAM_TYPE=DDR2"} 24{"RAM_TYPE=DDR3"} 26{"RAM_TYPE=DDR4"} 30{"RAM_TYPE=LPDDR3"} 34{"RAM_TYPE=DDR5"} 35{"RAM_TYPE=LPDDR5"} default{"RAM_TYPE=Unknown"}}
+echo.
+echo # Battery Logic
+echo if ^(Get-CimInstance Win32_Battery^) { "HAS_BATTERY=true"; "BATTERY_STATUS=Present" } else { "HAS_BATTERY=false"; "BATTERY_STATUS=No Battery" }
+echo.
+echo # Screen Size Logic
+echo $mon = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue
+echo if ^($mon^) {
+echo     $diag = [math]::Sqrt^([math]::Pow^($mon.MaxHorizontalImageSize,2^) + [math]::Pow^($mon.MaxVerticalImageSize,2^)^) / 2.54
+echo     "SCREEN_SIZE=" + [math]::Round^($diag, 1^)
+echo } else { "SCREEN_SIZE=Ext Monitor/Unknown" }
+) > "%SPECS_SCRIPT%"
 
-:: Get Model
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_ComputerSystem).Model"') do set MODEL=%%a
-if "%MODEL%"=="" set MODEL=Unknown
+:: Run the scanner once
+powershell -ExecutionPolicy Bypass -File "%SPECS_SCRIPT%" > "%SPECS_OUT%"
 
-:: Get CPU Name
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_Processor).Name"') do set CPU=%%a
-if "%CPU%"=="" set CPU=Unknown
+:: Read the output variables
+for /f "tokens=1,2 delims==" %%A in (%SPECS_OUT%) do (
+    set %%A=%%B
+)
 
-:: Get CPU Cores
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_Processor).NumberOfCores"') do set CPU_CORES=%%a
-if "%CPU_CORES%"=="" set CPU_CORES=0
-
-:: Get CPU Threads
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_Processor).NumberOfLogicalProcessors"') do set CPU_THREADS=%%a
-if "%CPU_THREADS%"=="" set CPU_THREADS=0
-
-:: Get CPU Speed
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_Processor).MaxClockSpeed"') do set CPU_SPEED=%%a
-if "%CPU_SPEED%"=="" set CPU_SPEED=0
-
-:: RAM Size
-for /f "tokens=*" %%a in ('powershell -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB)"') do set RAM_GB=%%a
-if "%RAM_GB%"=="" set RAM_GB=0
-
-:: RAM Type Detection
-set PS_RAM_TYPE_CMD="$m=(Get-CimInstance Win32_PhysicalMemory | Select-Object -First 1).SMBIOSMemoryType; switch($m){20{'DDR'} 21{'DDR2'} 24{'DDR3'} 26{'DDR4'} 30{'LPDDR3'} 34{'DDR5'} 35{'LPDDR5'} default{'Unknown'}}"
-for /f "tokens=*" %%a in ('powershell -Command %PS_RAM_TYPE_CMD%') do set RAM_TYPE=%%a
-
-:: Storage Size
-for /f "tokens=*" %%a in ('powershell -Command "[math]::Round((Get-CimInstance Win32_DiskDrive | Select-Object -First 1).Size / 1GB)"') do set DISK_GB=%%a
-if "%DISK_GB%"=="" set DISK_GB=0
-
-:: Storage Model
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_DiskDrive | Select-Object -First 1).Model"') do set DISK_MODEL=%%a
-if "%DISK_MODEL%"=="" set DISK_MODEL=Unknown
-
-:: Storage Type
+:: Disk Type Logic (Batch side)
 echo %DISK_MODEL% | findstr /I "SSD NVMe Solid" >nul
 if not errorlevel 1 (set DISK_TYPE=SSD) else (set DISK_TYPE=HDD)
 
-:: OS Name
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_OperatingSystem).Caption"') do set OS_NAME=%%a
-if "%OS_NAME%"=="" set OS_NAME=Unknown
-
-:: OS Version
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_OperatingSystem).Version"') do set OS_VERSION=%%a
-if "%OS_VERSION%"=="" set OS_VERSION=Unknown
-
-:: OS Build
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_OperatingSystem).BuildNumber"') do set OS_BUILD=%%a
-if "%OS_BUILD%"=="" set OS_BUILD=Unknown
-
-:: OS Architecture
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_OperatingSystem).OSArchitecture"') do set OS_ARCH=%%a
-if "%OS_ARCH%"=="" set OS_ARCH=Unknown
-
-:: GPU Name
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_VideoController | Select-Object -First 1).Name"') do set GPU=%%a
-if "%GPU%"=="" set GPU=Unknown
-
-:: GPU VRAM
-set PS_VRAM_CMD="[math]::Round((Get-CimInstance Win32_VideoController | Select-Object -First 1).AdapterRAM / 1MB)"
-for /f "tokens=*" %%a in ('powershell -Command %PS_VRAM_CMD%') do set GPU_RAM=%%a
-if "%GPU_RAM%"=="" set GPU_RAM=0
-
-:: Screen Resolution
-set PS_RES_CMD="$v=Get-CimInstance Win32_VideoController | Select-Object -First 1; $v.CurrentHorizontalResolution + 'x' + $v.CurrentVerticalResolution"
-for /f "tokens=*" %%a in ('powershell -Command %PS_RES_CMD%') do set RESOLUTION=%%a
-if "%RESOLUTION%"=="x" set RESOLUTION=Unknown
-
-:: Screen Size
-set PS_SCREEN_CMD="$wmi=Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue; if($wmi){$diag=[math]::Sqrt([math]::Pow($wmi.MaxHorizontalImageSize,2)+[math]::Pow($wmi.MaxVerticalImageSize,2))/2.54; [math]::Round($diag,1)}else{'Unknown'}"
-for /f "tokens=*" %%a in ('powershell -Command %PS_SCREEN_CMD%') do set SCREEN_SIZE=%%a
-if "%SCREEN_SIZE%"=="Unknown" set SCREEN_SIZE=Ext Monitor/Unknown
-
-:: MAC Address
-for /f "tokens=*" %%a in ('powershell -Command "(Get-CimInstance Win32_NetworkAdapterConfiguration | Where-Object {$_.IPEnabled -eq $true} | Select-Object -First 1).MACAddress"') do set MAC_ADDR=%%a
-if "%MAC_ADDR%"=="" set MAC_ADDR=Unknown
-
-:: Battery
-set PS_BAT_CMD="if((Get-CimInstance Win32_Battery)){'Yes'}else{'No'}"
-for /f "tokens=*" %%a in ('powershell -Command %PS_BAT_CMD%') do set HAS_BATTERY_STR=%%a
-if "%HAS_BATTERY_STR%"=="Yes" (
-    set HAS_BATTERY=true
-    set BATTERY_STATUS=Present
-) else (
-    set HAS_BATTERY=false
-    set BATTERY_STATUS=No Battery
-)
+:: Clean up temp files
+del "%SPECS_SCRIPT%"
+del "%SPECS_OUT%"
 
 set USER_NAME=%USERNAME%
 set COMPUTER_NAME=%COMPUTERNAME%
@@ -255,6 +221,7 @@ if not errorlevel 1 (
     echo.
     echo Opening web dashboard...
     start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
+)&refresh_token=%REFRESH_TOKEN%"
 )
 
 :: Cleanup
