@@ -139,6 +139,26 @@ export default function Inventory() {
 
 
 
+    async function updateField(id: string, updates: Partial<InventoryItem>) {
+        try {
+            const { error } = await supabase
+                .from('inventory_items')
+                .update(updates)
+                .eq('id', id);
+
+            if (error) throw error;
+
+            // Update local state immediately
+            if (selectedItem && selectedItem.id === id) {
+                const newItem = { ...selectedItem, ...updates };
+                setSelectedItem(newItem);
+                setItems(items.map(i => i.id === id ? newItem : i));
+            }
+        } catch (err) {
+            console.error('Update failed', err);
+        }
+    }
+
     async function deleteItem(id: string) {
         if (!confirm('Are you sure you want to delete this device? This cannot be undone.')) return;
         try {
@@ -349,31 +369,54 @@ export default function Inventory() {
                                 </div>
                             </div>
 
-                            {/* Ultra Compact Controls (Read Only View) */}
+                            {/* Ultra Compact Controls (Quick Actions) */}
                             <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100 items-center">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Grade</span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold w-6 h-6 flex items-center justify-center ${getGradeColor(selectedItem.grade)}`}>
-                                        {selectedItem.grade}
-                                    </span>
+                                    <div className="flex bg-gray-50 rounded p-0.5 border border-gray-200">
+                                        {['A', 'B', 'C'].map(g => (
+                                            <button
+                                                key={g}
+                                                onClick={() => updateField(selectedItem.id, { grade: g })}
+                                                className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center transition-all ${selectedItem.grade === g
+                                                    ? g === 'A' ? 'bg-green-500 text-white' : g === 'B' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'
+                                                    : 'text-gray-400 hover:text-gray-600'
+                                                    }`}
+                                            >
+                                                {g}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div className="h-4 w-px bg-gray-200"></div>
 
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Status</span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(selectedItem.status)}`}>
-                                        {selectedItem.status?.replace('_', ' ')}
-                                    </span>
+                                    <select
+                                        value={selectedItem.status}
+                                        onChange={e => updateField(selectedItem.id, { status: e.target.value })}
+                                        className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 cursor-pointer hover:text-blue-600 p-0"
+                                    >
+                                        <option value="pending_triage">🟠 Pending Triage</option>
+                                        <option value="in_repair">🔵 In Repair</option>
+                                        <option value="ready_to_ship">🟢 Ready to Ship</option>
+                                        <option value="shipped">🟣 Shipped</option>
+                                        <option value="scrapped">⚫ Scrapped</option>
+                                    </select>
                                 </div>
 
                                 <div className="h-4 w-px bg-gray-200"></div>
 
                                 <div className="flex items-center gap-2 flex-1">
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Loc</span>
-                                    <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
-                                        {selectedItem.location || 'Unassigned'}
-                                    </span>
+                                    <input
+                                        type="text"
+                                        defaultValue={selectedItem.location || ''}
+                                        onBlur={e => updateField(selectedItem.id, { location: e.target.value })}
+                                        placeholder="Shelf ID..."
+                                        className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 p-0 w-full placeholder-gray-300"
+                                    />
                                 </div>
                             </div>
                         </div>
