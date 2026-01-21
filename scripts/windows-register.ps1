@@ -67,7 +67,6 @@ try {
 
     Write-Host ""
     Write-Host "Check your email/password and try again." -ForegroundColor Yellow
-    Write-Host "(Note: Use your full email address, e.g., user@example.com)" -ForegroundColor White
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
