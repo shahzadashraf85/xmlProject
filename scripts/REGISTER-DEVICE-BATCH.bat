@@ -21,7 +21,7 @@ set RESPFILE=%TEMP%\laptek_resp.txt
 echo {"email":"%EMAIL%","password":"%PASSWORD%"} > %AUTHFILE%
 
 :: Authenticate with Supabase
-curl -s -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/auth/v1/token?grant_type=password" ^
+curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/auth/v1/token?grant_type=password" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Content-Type: application/json" ^
   -d @%AUTHFILE% > %RESPFILE%
@@ -33,8 +33,13 @@ if errorlevel 1 (
     echo ========================================
     echo   AUTHENTICATION FAILED
     echo ========================================
-    echo Check your email and password.
+    echo Request Payload:
+    type %AUTHFILE%
+    echo.
+    echo Server Response:
     type %RESPFILE%
+    echo.
+    echo Check your email and password.
     pause
     exit /b 1
 )
