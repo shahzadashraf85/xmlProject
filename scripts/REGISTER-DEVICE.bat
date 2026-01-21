@@ -13,6 +13,6 @@ echo Starting PowerShell script...
 echo.
 
 REM Run PowerShell with bypass policy (no admin needed)
-powershell.exe -ExecutionPolicy Bypass -NoExit -File "%~dp0REGISTER-DEVICE.ps1"
+powershell.exe -ExecutionPolicy Bypass -NoExit -File "%~dp0windows-register.ps1"
 
 pause
