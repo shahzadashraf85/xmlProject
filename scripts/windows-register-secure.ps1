@@ -10,7 +10,7 @@ Write-Host ""
 # Configuration
 $SUPABASE_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co"
 $API_URL = "$SUPABASE_URL/functions/v1/register-device"
-$API_KEY = "sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
+$API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
 
 # SECURITY: Require Technician PIN
 Write-Host "Enter Technician PIN (4 digits): " -NoNewline -ForegroundColor Yellow
@@ -54,6 +54,7 @@ try {
 
     $authHeaders = @{
         "apikey" = $API_KEY
+        "Authorization" = "Bearer $API_KEY"
         "Content-Type" = "application/json"
     }
 
