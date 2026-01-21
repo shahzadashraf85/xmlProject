@@ -220,7 +220,7 @@ if not errorlevel 1 (
     echo Serial Number: %SERIAL%
     echo.
     echo Opening web dashboard...
-    start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
+    start "" "https://xmlproject.vercel.app/login?redirect=/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
 )&refresh_token=%REFRESH_TOKEN%"
 )
 

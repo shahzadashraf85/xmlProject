@@ -17,6 +17,7 @@ export default function Login() {
         const params = new URLSearchParams(window.location.search);
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
+        const redirectPath = params.get('redirect') || '/register';
 
         if (accessToken && refreshToken) {
             setLoading(true);
@@ -25,14 +26,14 @@ export default function Login() {
                 refresh_token: refreshToken
             }).then(({ error }: any) => {
                 if (!error) {
-                    navigate('/register');
+                    navigate(redirectPath);
                 } else {
                     setError('Auto-login failed. Please sign in manually.');
                 }
                 setLoading(false);
             });
         }
-    }, []);
+    }, [navigate]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
