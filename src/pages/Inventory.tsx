@@ -137,25 +137,7 @@ export default function Inventory() {
         }
     }
 
-    async function updateField(id: string, updates: Partial<InventoryItem>) {
-        try {
-            const { error } = await supabase
-                .from('inventory_items')
-                .update(updates)
-                .eq('id', id);
 
-            if (error) throw error;
-
-            // If we are just clicking buttons (Quick Actions), update local state immediately
-            if (selectedItem && selectedItem.id === id) {
-                const newItem = { ...selectedItem, ...updates };
-                setSelectedItem(newItem);
-                setItems(items.map(i => i.id === id ? newItem : i));
-            }
-        } catch (err) {
-            console.error('Update failed', err);
-        }
-    }
 
     async function deleteItem(id: string) {
         if (!confirm('Are you sure you want to delete this device? This cannot be undone.')) return;
@@ -352,91 +334,46 @@ export default function Inventory() {
                                         </span>
                                     </div>
 
-                                    {isEditing ? (
-                                        <div className="flex gap-2 items-center">
-                                            <input
-                                                className="text-xl font-bold text-gray-900 border-b border-blue-500 focus:outline-none bg-transparent w-32"
-                                                value={editForm.brand}
-                                                onChange={e => setEditForm({ ...editForm, brand: e.target.value })}
-                                            />
-                                            <input
-                                                className="text-xl font-bold text-gray-900 border-b border-blue-500 focus:outline-none bg-transparent flex-1"
-                                                value={editForm.model}
-                                                onChange={e => setEditForm({ ...editForm, model: e.target.value })}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <h1 className="text-2xl font-bold text-gray-900 truncate">
-                                            {selectedItem.brand} <span className="text-gray-600 font-medium">{selectedItem.model}</span>
-                                        </h1>
-                                    )}
+                                    <h1 className="text-2xl font-bold text-gray-900 truncate">
+                                        {selectedItem.brand} <span className="text-gray-600 font-medium">{selectedItem.model}</span>
+                                    </h1>
                                 </div>
 
                                 <div className="flex gap-2 flex-shrink-0">
-                                    {!isEditing ? (
-                                        <button onClick={() => setIsEditing(true)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded text-xs border border-gray-200">
-                                            ✏️ Edit
-                                        </button>
-                                    ) : (
-                                        <>
-                                            <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded border border-gray-200">Cancel</button>
-                                            <button onClick={saveChanges} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm">Save</button>
-                                        </>
-                                    )}
+                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs border border-blue-100 font-medium px-3 flex items-center gap-1">
+                                        ✏️ Edit
+                                    </button>
                                     <button onClick={() => deleteItem(selectedItem.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100">
                                         🗑️
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Ultra Compact Controls */}
+                            {/* Ultra Compact Controls (Read Only View) */}
                             <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100 items-center">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Grade</span>
-                                    <div className="flex bg-gray-50 rounded p-0.5 border border-gray-200">
-                                        {['A', 'B', 'C'].map(g => (
-                                            <button
-                                                key={g}
-                                                onClick={() => updateField(selectedItem.id, { grade: g })}
-                                                className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center transition-all ${selectedItem.grade === g
-                                                        ? g === 'A' ? 'bg-green-500 text-white' : g === 'B' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'
-                                                        : 'text-gray-400 hover:text-gray-600'
-                                                    }`}
-                                            >
-                                                {g}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold w-6 h-6 flex items-center justify-center ${getGradeColor(selectedItem.grade)}`}>
+                                        {selectedItem.grade}
+                                    </span>
                                 </div>
 
                                 <div className="h-4 w-px bg-gray-200"></div>
 
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Status</span>
-                                    <select
-                                        value={selectedItem.status}
-                                        onChange={e => updateField(selectedItem.id, { status: e.target.value })}
-                                        className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 cursor-pointer hover:text-blue-600 p-0"
-                                    >
-                                        <option value="pending_triage">🟠 Pending Triage</option>
-                                        <option value="in_repair">🔵 In Repair</option>
-                                        <option value="ready_to_ship">🟢 Ready to Ship</option>
-                                        <option value="shipped">🟣 Shipped</option>
-                                        <option value="scrapped">⚫ Scrapped</option>
-                                    </select>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(selectedItem.status)}`}>
+                                        {selectedItem.status?.replace('_', ' ')}
+                                    </span>
                                 </div>
 
                                 <div className="h-4 w-px bg-gray-200"></div>
 
                                 <div className="flex items-center gap-2 flex-1">
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Loc</span>
-                                    <input
-                                        type="text"
-                                        defaultValue={selectedItem.location || ''}
-                                        onBlur={e => updateField(selectedItem.id, { location: e.target.value })}
-                                        placeholder="Shelf ID..."
-                                        className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 p-0 w-full placeholder-gray-300"
-                                    />
+                                    <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                                        {selectedItem.location || 'Unassigned'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -553,6 +490,106 @@ export default function Inventory() {
                     </div>
                 )}
             </div>
+
+            {/* EDIT MODAL */}
+            {isEditing && selectedItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-gray-100">
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h2 className="text-lg font-bold text-gray-800">Edit Device Details</h2>
+                            <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Brand</label>
+                                    <input
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        value={editForm.brand || ''}
+                                        onChange={e => setEditForm({ ...editForm, brand: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Model</label>
+                                    <input
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                        value={editForm.model || ''}
+                                        onChange={e => setEditForm({ ...editForm, model: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Serial Number</label>
+                                <input
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+                                    value={editForm.serial_number || ''}
+                                    onChange={e => setEditForm({ ...editForm, serial_number: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Grade</label>
+                                    <div className="flex gap-2">
+                                        {['A', 'B', 'C'].map(g => (
+                                            <button
+                                                key={g}
+                                                onClick={() => setEditForm({ ...editForm, grade: g })}
+                                                className={`flex-1 py-2 rounded-lg font-bold border ${editForm.grade === g
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                                            >
+                                                {g}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                                    <select
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                                        value={editForm.status || ''}
+                                        onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                                    >
+                                        <option value="pending_triage">Pending Triage</option>
+                                        <option value="in_repair">In Repair</option>
+                                        <option value="ready_to_ship">Ready to Ship</option>
+                                        <option value="shipped">Shipped</option>
+                                        <option value="scrapped">Scrapped</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Location</label>
+                                <input
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    placeholder="e.g. Shelf A-12, Bin 3..."
+                                    value={editForm.location || ''}
+                                    onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveChanges}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-colors"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
