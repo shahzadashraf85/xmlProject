@@ -7,13 +7,11 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-    // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
     try {
-        // Use service role key for database operations (bypasses RLS)
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -24,105 +22,123 @@ serve(async (req) => {
             deviceData = await req.json()
         } catch (parseError) {
             return new Response(
-                JSON.stringify({ error: 'Invalid JSON in request body', details: String(parseError) }),
+                JSON.stringify({ error: 'Invalid JSON', details: String(parseError) }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
             )
         }
 
-        // Validate required fields
         if (!deviceData.serial_number || !deviceData.model) {
             return new Response(
-                JSON.stringify({
-                    error: 'Missing required fields',
-                    received: {
-                        serial_number: deviceData.serial_number || 'MISSING',
-                        model: deviceData.model || 'MISSING'
-                    }
-                }),
+                JSON.stringify({ error: 'Missing serial_number or model' }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
             )
         }
 
-        // Check for duplicate serial number
-        const { data: existing, error: checkError } = await supabaseClient
+        // Check for duplicate
+        const { data: existing } = await supabaseClient
             .from('inventory_items')
             .select('id, serial_number, model, brand')
             .eq('serial_number', deviceData.serial_number)
             .maybeSingle()
 
-        if (checkError) {
-            return new Response(
-                JSON.stringify({
-                    error: 'Database check failed',
-                    details: checkError.message,
-                    hint: 'Make sure inventory_items table exists. Run the SQL migration first.'
-                }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            )
-        }
-
         if (existing) {
             return new Response(
-                JSON.stringify({
-                    error: 'Device already registered',
-                    message: `This device (${existing.brand} ${existing.model}) is already in the system.`,
-                    existing_device: existing
-                }),
+                JSON.stringify({ error: 'Device already registered', existing_device: existing }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
             )
         }
 
-        // Merge specs
+        // Extract specs from nested object
         const specs = deviceData.specs || {}
-        if (deviceData.audit) {
-            specs.audit = deviceData.audit
-        }
 
-        // Insert into inventory_items table
+        // Insert with all individual columns
         const { data, error } = await supabaseClient
             .from('inventory_items')
             .insert({
-                brand: deviceData.brand || 'Unknown',
+                // Basic Info
+                brand: deviceData.brand || specs.manufacturer || 'Unknown',
                 model: deviceData.model,
                 serial_number: deviceData.serial_number,
-                device_type: deviceData.device_type || 'LAPTOP',
+                device_type: deviceData.device_type || 'Computer',
                 grade: deviceData.grade || 'B',
-                specs: specs,
                 status: deviceData.status || 'pending_triage',
                 location: deviceData.location || 'Receiving',
-                repair_needed_description: deviceData.notes || null
+
+                // System Info
+                manufacturer: specs.manufacturer || deviceData.brand,
+                model_number: specs.model_number || deviceData.model,
+                part_number: specs.part_number,
+                motherboard: specs.motherboard,
+                bios_version: specs.bios_version,
+
+                // Processor
+                processor: specs.processor,
+                processor_cores: specs.processor_cores,
+                processor_threads: specs.processor_threads,
+                processor_speed_mhz: specs.processor_speed_mhz,
+                processor_architecture: specs.processor_architecture,
+
+                // Memory
+                ram_gb: specs.ram_gb,
+                ram_type: specs.ram_type,
+                ram_speed_mhz: specs.ram_speed_mhz,
+                ram_slots: specs.ram_slots,
+
+                // Storage
+                storage_gb: specs.storage_gb,
+                storage_type: specs.storage_type,
+                storage_model: specs.storage_model,
+
+                // Graphics
+                graphics_card: specs.graphics_card,
+                graphics_vram_mb: specs.graphics_vram_mb,
+                graphics_driver: specs.graphics_driver,
+
+                // Display
+                screen_resolution: specs.screen_resolution,
+                screen_size: specs.screen_size,
+                monitor_count: specs.monitor_count,
+
+                // OS
+                os_name: specs.os_name,
+                os_version: specs.os_version,
+                os_build: specs.os_build,
+                os_architecture: specs.os_architecture,
+
+                // Network
+                mac_address: specs.mac_address,
+                wifi_adapter: specs.wifi_adapter,
+
+                // Battery
+                has_battery: specs.has_battery || false,
+                battery_status: specs.battery_status,
+
+                // Audit
+                scanned_at: specs.scanned_at ? new Date(specs.scanned_at) : new Date(),
+                scanned_by: specs.scanned_by,
+                computer_name: specs.computer_name,
+
+                // Keep original specs as JSON for additional data
+                specs: specs
             })
             .select()
             .single()
 
         if (error) {
             return new Response(
-                JSON.stringify({
-                    error: 'Database insert failed',
-                    details: error.message,
-                    code: error.code,
-                    hint: error.hint || 'Check if all required columns exist in inventory_items table'
-                }),
+                JSON.stringify({ error: 'Database error', details: error.message }),
                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
             )
         }
 
         return new Response(
-            JSON.stringify({
-                success: true,
-                message: 'Device registered successfully',
-                device: data
-            }),
+            JSON.stringify({ success: true, device: data }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 201 }
         )
 
     } catch (error) {
         return new Response(
-            JSON.stringify({
-                error: 'Unexpected server error',
-                details: String(error),
-                stack: error.stack || 'No stack trace'
-            }),
+            JSON.stringify({ error: 'Server error', details: String(error) }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         )
     }

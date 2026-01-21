@@ -1,47 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { InventoryItem, DeviceSpecs } from '../types';
+
+interface InventoryItem {
+    id: string;
+    brand: string;
+    model: string;
+    serial_number: string;
+    device_type: string;
+    grade: string;
+    status: string;
+    location: string;
+    processor: string;
+    processor_cores: number;
+    ram_gb: number;
+    ram_type: string;
+    storage_gb: number;
+    storage_type: string;
+    graphics_card: string;
+    screen_size: string;
+    screen_resolution: string;
+    os_name: string;
+    os_version: string;
+    mac_address: string;
+    has_battery: boolean;
+    battery_status: string;
+    product_condition: string;
+    offer_price: number;
+    scanned_at: string;
+    scanned_by: string;
+    created_at: string;
+    specs: any;
+}
 
 export default function Inventory() {
     const [items, setItems] = useState<InventoryItem[]>([]);
-    const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
-
-    // Filters
-    const [filterBrand, setFilterBrand] = useState('');
-    const [filterType, setFilterType] = useState('all');
-    const [filterCondition, setFilterCondition] = useState('all');
-
-    const [editingId, setEditingId] = useState<string | null>(null);
-
-    // Form State
-    const emptySpecs: DeviceSpecs = {
-        processor: '', ram: '', storage: '', graphics: '', os: '', condition: '',
-        display: '', ports: '', connectivity: '', keyboard: '', battery: '', // Laptop
-        form_factor: '', network: '', warranty: '' // Desktop
-    };
-
-    const [formData, setFormData] = useState<Partial<InventoryItem> & { specs: DeviceSpecs }>({
-        serial_number: '',
-        brand: '',
-        model: '',
-        device_type: 'laptop',
-        grade: 'B',
-        repair_needed_description: '',
-        status: 'pending_triage',
-        specs: { ...emptySpecs }
-    });
+    const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterGrade, setFilterGrade] = useState('all');
+    const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
     useEffect(() => {
-        fetchInventory();
+        loadInventory();
     }, []);
 
-    useEffect(() => {
-        applyFilters();
-    }, [items, filterBrand, filterType, filterCondition]);
-
-    async function fetchInventory() {
+    async function loadInventory() {
+        setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('inventory_items')
@@ -51,435 +56,379 @@ export default function Inventory() {
             if (error) throw error;
             setItems(data || []);
         } catch (err) {
-            console.error('Error fetching inventory:', err);
+            console.error('Error loading inventory:', err);
         } finally {
             setLoading(false);
         }
     }
 
-    function applyFilters() {
-        let res = items;
-        if (filterBrand) {
-            res = res.filter(i => i.brand.toLowerCase().includes(filterBrand.toLowerCase()));
-        }
-        if (filterType !== 'all') {
-            res = res.filter(i => i.device_type === filterType);
-        }
-        if (filterCondition !== 'all') {
-            res = res.filter(i => i.grade === filterCondition);
-        }
-        setFilteredItems(res);
-    }
-
-    function handlePrint() {
-        window.print();
-    }
-
-    async function handleAddDevice(e: React.FormEvent) {
-        e.preventDefault();
+    async function updateItem(id: string, updates: Partial<InventoryItem>) {
         try {
-            // Auto-map Grade to Condition text if empty (only for new or if cleared)
-            const gradeMap: Record<string, string> = { 'A': 'Excellent', 'B': 'Good', 'C': 'Fair' };
-            if (!formData.specs.condition && formData.grade) {
-                formData.specs.condition = gradeMap[formData.grade] || '';
-            }
+            const { error } = await supabase
+                .from('inventory_items')
+                .update(updates)
+                .eq('id', id);
 
-            if (editingId) {
-                // UPDATE Existing
-                const { error } = await supabase
-                    .from('inventory_items')
-                    .update({
-                        serial_number: formData.serial_number,
-                        brand: formData.brand,
-                        model: formData.model,
-                        device_type: formData.device_type,
-                        grade: formData.grade,
-                        repair_needed_description: formData.repair_needed_description,
-                        specs: formData.specs,
-                        // Don't update status implicitly on edit, unless we add a status field to form
-                    })
-                    .eq('id', editingId);
-
-                if (error) throw error;
-                alert('Device Updated Successfully!');
-            } else {
-                // INSERT New
-                const { error } = await supabase
-                    .from('inventory_items')
-                    .insert([formData]);
-
-                if (error) throw error;
-                alert('Device Registered Successfully!');
-            }
-
-            closeModal();
-            fetchInventory();
-        } catch (err: any) {
-            alert('Error saving device: ' + err.message);
-        }
-    }
-
-    async function handleDelete(id: string) {
-        if (!confirm('Are you sure you want to delete this device? This cannot be undone.')) return;
-        try {
-            const { error } = await supabase.from('inventory_items').delete().eq('id', id);
             if (error) throw error;
-            setItems(items.filter(i => i.id !== id));
-        } catch (err: any) {
-            alert('Delete failed: ' + err.message);
+            loadInventory();
+            if (selectedItem?.id === id) {
+                setSelectedItem({ ...selectedItem, ...updates });
+            }
+        } catch (err) {
+            alert('Error updating item');
         }
     }
 
-    function handleEdit(item: InventoryItem) {
-        setEditingId(item.id);
-        setFormData({
-            ...item,
-            specs: item.specs || { ...emptySpecs }
-        });
-        setShowAddModal(true);
+    async function deleteItem(id: string) {
+        if (!confirm('Delete this device permanently?')) return;
+        try {
+            const { error } = await supabase
+                .from('inventory_items')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            loadInventory();
+            setSelectedItem(null);
+        } catch (err) {
+            alert('Error deleting item');
+        }
     }
 
-    function closeModal() {
-        setShowAddModal(false);
-        setEditingId(null);
-        setFormData({
-            serial_number: '',
-            brand: '',
-            model: '',
-            device_type: 'laptop',
-            grade: 'B',
-            repair_needed_description: '',
-            status: 'pending_triage',
-            specs: { ...emptySpecs }
-        });
-    }
+    const filteredItems = items.filter(item => {
+        const matchesSearch =
+            item.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.processor?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const updateSpec = (field: keyof DeviceSpecs, value: string) => {
-        setFormData(prev => ({
-            ...prev,
-            specs: { ...prev.specs, [field]: value }
-        }));
-    };
+        const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
+        const matchesGrade = filterGrade === 'all' || item.grade === filterGrade;
 
-    // Stats
+        return matchesSearch && matchesStatus && matchesGrade;
+    });
+
     const stats = {
         total: items.length,
-        ready: items.filter(i => i.grade === 'A').length,
-        repair: items.filter(i => i.grade === 'B').length,
-        parts: items.filter(i => i.grade === 'C').length,
+        gradeA: items.filter(i => i.grade === 'A').length,
+        gradeB: items.filter(i => i.grade === 'B').length,
+        gradeC: items.filter(i => i.grade === 'C').length,
+        pending: items.filter(i => i.status === 'pending_triage').length,
+        ready: items.filter(i => i.status === 'ready_to_ship').length,
+    };
+
+    const gradeColors: Record<string, string> = {
+        'A': 'bg-green-100 text-green-800 border-green-200',
+        'B': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        'C': 'bg-red-100 text-red-800 border-red-200',
+    };
+
+    const statusColors: Record<string, string> = {
+        'pending_triage': 'bg-orange-100 text-orange-800',
+        'in_repair': 'bg-blue-100 text-blue-800',
+        'ready_to_ship': 'bg-green-100 text-green-800',
+        'shipped': 'bg-purple-100 text-purple-800',
+        'scrapped': 'bg-gray-100 text-gray-800',
     };
 
     return (
-        <div className="p-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 no-print">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-                    <p className="text-gray-500">Track laptops and desktops</p>
+        <div className="flex h-[calc(100vh-64px)] bg-gray-50">
+            {/* LEFT: Device List */}
+            <div className="w-[400px] bg-white border-r border-gray-200 flex flex-col">
+                {/* Header */}
+                <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+                    <h1 className="text-xl font-bold text-white">Inventory Manager</h1>
+                    <p className="text-blue-100 text-sm mt-1">{stats.total} devices</p>
                 </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={handlePrint}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm flex items-center gap-2"
-                    >
-                        🖨️ Print
-                    </button>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm flex items-center gap-2"
-                    >
-                        <span>+</span> Register Device
-                    </button>
-                </div>
-            </div>
 
-            {/* Stats Cards (No Print) */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 no-print">
-                <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Total Stock</p>
-                    <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-xl shadow-sm border border-green-100">
-                    <p className="text-xs text-green-600 uppercase font-semibold">Ready (Grade A)</p>
-                    <p className="text-2xl font-bold text-green-900">{stats.ready}</p>
-                </div>
-                <div className="p-4 bg-yellow-50 rounded-xl shadow-sm border border-yellow-100">
-                    <p className="text-xs text-yellow-600 uppercase font-semibold">Needs Repair (Grade B)</p>
-                    <p className="text-2xl font-bold text-yellow-900">{stats.repair}</p>
-                </div>
-                <div className="p-4 bg-red-50 rounded-xl shadow-sm border border-red-100">
-                    <p className="text-xs text-red-600 uppercase font-semibold">Parts (Grade C)</p>
-                    <p className="text-2xl font-bold text-red-900">{stats.parts}</p>
-                </div>
-            </div>
-
-            {/* Filters (No Print) */}
-            <div className="mb-6 flex flex-wrap gap-4 no-print bg-white p-4 rounded-xl shadow-sm">
-                <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Filter by Brand</label>
-                    <input
-                        type="text"
-                        placeholder="Search Brand/Model..."
-                        className="w-full rounded-md border-gray-300 border p-2 text-sm"
-                        value={filterBrand}
-                        onChange={e => setFilterBrand(e.target.value)}
-                    />
-                </div>
-                <div className="w-40">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Device Type</label>
-                    <select
-                        className="w-full rounded-md border-gray-300 border p-2 text-sm"
-                        value={filterType}
-                        onChange={e => setFilterType(e.target.value)}
-                    >
-                        <option value="all">All Types</option>
-                        <option value="laptop">Laptops</option>
-                        <option value="desktop">Desktops</option>
-                    </select>
-                </div>
-                <div className="w-40">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Condition/Grade</label>
-                    <select
-                        className="w-full rounded-md border-gray-300 border p-2 text-sm"
-                        value={filterCondition}
-                        onChange={e => setFilterCondition(e.target.value)}
-                    >
-                        <option value="all">All Grades</option>
-                        <option value="A">Grade A (Ready)</option>
-                        <option value="B">Grade B (Repair)</option>
-                        <option value="C">Grade C (Parts)</option>
-                    </select>
-                </div>
-            </div>
-
-            {/* Inventory List */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden print:shadow-none">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-4 py-3 text-left font-medium text-gray-500">Serial #</th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-500">Device</th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-500">Specs Summary</th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-500">Grade / Cond</th>
-                            <th className="px-4 py-3 text-left font-medium text-gray-500">Issues</th>
-                            <th className="px-4 py-3 text-center font-medium text-gray-500 no-print">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {loading ? (
-                            <tr><td colSpan={6} className="p-4 text-center">Loading inventory...</td></tr>
-                        ) : filteredItems.length === 0 ? (
-                            <tr><td colSpan={6} className="p-4 text-center">No devices found.</td></tr>
-                        ) : filteredItems.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50 group">
-                                <td className="px-4 py-3 font-mono text-gray-900 align-top">{item.serial_number}</td>
-                                <td className="px-4 py-3 align-top">
-                                    <div className="font-bold text-gray-900">{item.brand} {item.model}</div>
-                                    <div className="text-xs text-gray-500 capitalize">{item.device_type}</div>
-                                </td>
-                                <td className="px-4 py-3 align-top">
-                                    {item.specs ? (
-                                        <div className="space-y-1">
-                                            <div className="font-medium">{item.specs.processor} / {item.specs.ram} / {item.specs.storage}</div>
-                                            <div className="text-xs text-gray-600">{item.specs.graphics} • {item.specs.os}</div>
-                                            {item.device_type === 'laptop' && item.specs.display && (
-                                                <div className="text-xs text-gray-500">Display: {item.specs.display}</div>
-                                            )}
-                                        </div>
-                                    ) : <span className="text-gray-400">-</span>}
-                                </td>
-                                <td className="px-4 py-3 align-top">
-                                    <div className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-1 ${item.grade === 'A' ? 'bg-green-100 text-green-800' :
-                                        item.grade === 'B' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-red-100 text-red-800'
-                                        }`}>
-                                        Grade {item.grade}
-                                    </div>
-                                    <div className="text-xs text-gray-500">{item.specs?.condition}</div>
-                                </td>
-                                <td className="px-4 py-3 text-gray-500 max-w-xs align-top">
-                                    {item.repair_needed_description || <span className="text-green-600 text-xs">No Issues</span>}
-                                </td>
-                                <td className="px-4 py-3 text-center align-top no-print">
-                                    <div className="flex justify-center gap-2">
-                                        <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 text-sm">
-                                            ✏️
-                                        </button>
-                                        <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800 text-sm">
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Add Device Modal (No Print) */}
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 no-print">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
-                        <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
-                            <h2 className="text-xl font-bold">{editingId ? 'Edit Device Details' : 'Register New Device'}</h2>
-                            <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">✕</button>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto">
-                            <form id="add-form" onSubmit={handleAddDevice} className="space-y-6">
-                                {/* Basic Info */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Device Type</label>
-                                        <select className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-                                            value={formData.device_type}
-                                            onChange={e => setFormData({ ...formData, device_type: e.target.value as any })}
-                                        >
-                                            <option value="laptop">Laptop</option>
-                                            <option value="desktop">Desktop</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Serial Number</label>
-                                        <input required type="text" className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-                                            value={formData.serial_number} onChange={e => setFormData({ ...formData, serial_number: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Brand</label>
-                                        <input required type="text" className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-                                            value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Model</label>
-                                        <input required type="text" className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-                                            value={formData.model} onChange={e => setFormData({ ...formData, model: e.target.value })} />
-                                    </div>
-                                </div>
-
-                                <hr />
-
-                                {/* Specifications */}
-                                <h3 className="font-semibold text-gray-800">Specifications</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="col-span-1">
-                                        <label className="block text-xs font-medium text-gray-600">Processor (CPU)</label>
-                                        <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="e.g. i5-1135G7"
-                                            value={formData.specs.processor} onChange={e => updateSpec('processor', e.target.value)} />
-                                    </div>
-                                    <div className="col-span-1">
-                                        <label className="block text-xs font-medium text-gray-600">RAM (GB/Type)</label>
-                                        <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="e.g. 16GB DDR4"
-                                            value={formData.specs.ram} onChange={e => updateSpec('ram', e.target.value)} />
-                                    </div>
-                                    <div className="col-span-1">
-                                        <label className="block text-xs font-medium text-gray-600">Storage (Type/Size)</label>
-                                        <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="e.g. 512GB NVMe"
-                                            value={formData.specs.storage} onChange={e => updateSpec('storage', e.target.value)} />
-                                    </div>
-                                    <div className="col-span-1">
-                                        <label className="block text-xs font-medium text-gray-600">Graphics</label>
-                                        <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="e.g. Iris Xe / RTX 3050"
-                                            value={formData.specs.graphics} onChange={e => updateSpec('graphics', e.target.value)} />
-                                    </div>
-                                    <div className="col-span-1">
-                                        <label className="block text-xs font-medium text-gray-600">OS</label>
-                                        <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="e.g. Win 10 Pro"
-                                            value={formData.specs.os} onChange={e => updateSpec('os', e.target.value)} />
-                                    </div>
-
-                                    {/* Laptop Specific */}
-                                    {formData.device_type === 'laptop' && (
-                                        <>
-                                            <div className="col-span-1">
-                                                <label className="block text-xs font-medium text-gray-600">Display</label>
-                                                <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="14 inch FHD"
-                                                    value={formData.specs.display} onChange={e => updateSpec('display', e.target.value)} />
-                                            </div>
-                                            <div className="col-span-1">
-                                                <label className="block text-xs font-medium text-gray-600">Battery Health</label>
-                                                <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="Example: Excellent / 85%"
-                                                    value={formData.specs.battery} onChange={e => updateSpec('battery', e.target.value)} />
-                                            </div>
-                                            <div className="col-span-1">
-                                                <label className="block text-xs font-medium text-gray-600">Keyboard</label>
-                                                <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="Backlit?"
-                                                    value={formData.specs.keyboard} onChange={e => updateSpec('keyboard', e.target.value)} />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* Desktop Specific */}
-                                    {formData.device_type === 'desktop' && (
-                                        <>
-                                            <div className="col-span-1">
-                                                <label className="block text-xs font-medium text-gray-600">Form Factor</label>
-                                                <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="Tower / SFF / Mini"
-                                                    value={formData.specs.form_factor} onChange={e => updateSpec('form_factor', e.target.value)} />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-medium text-gray-600">Ports / Connectivity</label>
-                                        <input type="text" className="mt-1 w-full rounded border border-gray-300 p-1.5 text-sm" placeholder="USB-C, HDMI, Wifi 6..."
-                                            value={formData.specs.ports} onChange={e => updateSpec('ports', e.target.value)} />
-                                    </div>
-                                </div>
-
-                                <hr />
-
-                                {/* Grading & Condition */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Grade & Condition</label>
-                                    <div className="mt-2 flex gap-4 mb-3">
-                                        {[
-                                            { g: 'A', label: 'Grade A (Ready)' },
-                                            { g: 'B', label: 'Grade B (Repair)' },
-                                            { g: 'C', label: 'Grade C (Parts)' }
-                                        ].map((opt) => (
-                                            <label key={opt.g} className="flex items-center gap-2 cursor-pointer bg-gray-50 px-3 py-2 rounded border hover:bg-gray-100">
-                                                <input type="radio" name="grade" value={opt.g}
-                                                    checked={formData.grade === opt.g}
-                                                    onChange={e => setFormData({ ...formData, grade: e.target.value as any })}
-                                                />
-                                                <span className="text-sm font-bold">{opt.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    <label className="block text-xs font-medium text-gray-600">Detailed Condition</label>
-                                    <input type="text" className="mt-1 w-full rounded border border-gray-300 p-2 text-sm" placeholder="e.g. Light scratch on lid, Screen perfect"
-                                        value={formData.specs.condition} onChange={e => updateSpec('condition', e.target.value)} />
-                                </div>
-
-                                {formData.grade === 'B' && (
-                                    <div className="bg-red-50 p-4 rounded-md border border-red-100">
-                                        <label className="block text-sm font-medium text-red-700">Repair Required (Issues)</label>
-                                        <textarea rows={2} className="mt-1 block w-full rounded-md border-red-300 border p-2 focus:ring-red-500"
-                                            placeholder="Describe what technically needs to be fixed..."
-                                            value={formData.repair_needed_description} onChange={e => setFormData({ ...formData, repair_needed_description: e.target.value })} />
-                                    </div>
-                                )}
-
-                            </form>
-                        </div>
-
-                        <div className="p-5 border-t bg-gray-50 flex justify-end gap-3">
-                            <button type="button" onClick={closeModal} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
-                            <button type="submit" form="add-form" className="px-6 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700">
-                                {editingId ? 'Save Changes' : 'Register Device'}
-                            </button>
-                        </div>
+                {/* Stats Bar */}
+                <div className="grid grid-cols-4 gap-1 p-2 bg-gray-50 border-b">
+                    <div className="text-center p-2 bg-white rounded">
+                        <div className="text-lg font-bold text-gray-900">{stats.total}</div>
+                        <div className="text-[10px] text-gray-500">Total</div>
+                    </div>
+                    <div className="text-center p-2 bg-green-50 rounded">
+                        <div className="text-lg font-bold text-green-700">{stats.gradeA}</div>
+                        <div className="text-[10px] text-green-600">Grade A</div>
+                    </div>
+                    <div className="text-center p-2 bg-yellow-50 rounded">
+                        <div className="text-lg font-bold text-yellow-700">{stats.gradeB}</div>
+                        <div className="text-[10px] text-yellow-600">Grade B</div>
+                    </div>
+                    <div className="text-center p-2 bg-red-50 rounded">
+                        <div className="text-lg font-bold text-red-700">{stats.gradeC}</div>
+                        <div className="text-[10px] text-red-600">Grade C</div>
                     </div>
                 </div>
-            )}
 
-            <style>{`
-                @media print {
-                    .no-print { display: none !important; }
-                    body { font-size: 10pt; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid #ddd; padding: 4px; }
-                }
-            `}</style>
+                {/* Search & Filters */}
+                <div className="p-3 border-b space-y-2">
+                    <input
+                        type="text"
+                        placeholder="Search by brand, model, serial..."
+                        className="w-full p-2 border rounded-lg text-sm"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                        <select
+                            className="flex-1 p-2 border rounded text-xs"
+                            value={filterStatus}
+                            onChange={e => setFilterStatus(e.target.value)}
+                        >
+                            <option value="all">All Status</option>
+                            <option value="pending_triage">Pending</option>
+                            <option value="in_repair">In Repair</option>
+                            <option value="ready_to_ship">Ready</option>
+                            <option value="shipped">Shipped</option>
+                        </select>
+                        <select
+                            className="flex-1 p-2 border rounded text-xs"
+                            value={filterGrade}
+                            onChange={e => setFilterGrade(e.target.value)}
+                        >
+                            <option value="all">All Grades</option>
+                            <option value="A">Grade A</option>
+                            <option value="B">Grade B</option>
+                            <option value="C">Grade C</option>
+                        </select>
+                        <button onClick={loadInventory} className="p-2 bg-blue-600 text-white rounded text-xs">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+
+                {/* Device List */}
+                <div className="flex-1 overflow-y-auto">
+                    {loading ? (
+                        <div className="flex justify-center p-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                    ) : filteredItems.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            <span className="text-4xl block mb-2">📦</span>
+                            No devices found
+                        </div>
+                    ) : (
+                        <div className="divide-y">
+                            {filteredItems.map(item => (
+                                <div
+                                    key={item.id}
+                                    onClick={() => setSelectedItem(item)}
+                                    className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                                        }`}
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <h3 className="font-semibold text-sm text-gray-900">
+                                            {item.brand} {item.model}
+                                        </h3>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${gradeColors[item.grade] || 'bg-gray-100'}`}>
+                                            {item.grade}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 font-mono mb-1">{item.serial_number}</p>
+                                    <div className="flex gap-2 text-xs">
+                                        <span className="text-gray-600">{item.ram_gb}GB • {item.storage_gb}GB</span>
+                                        <span className={`px-1.5 py-0.5 rounded ${statusColors[item.status] || 'bg-gray-100'}`}>
+                                            {item.status?.replace('_', ' ')}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* RIGHT: Device Details */}
+            <div className="flex-1 overflow-y-auto">
+                {selectedItem ? (
+                    <div className="p-6">
+                        {/* Header */}
+                        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className={`px-3 py-1 rounded-lg text-sm font-bold border ${gradeColors[selectedItem.grade]}`}>
+                                            Grade {selectedItem.grade}
+                                        </span>
+                                        <span className={`px-3 py-1 rounded-lg text-sm ${statusColors[selectedItem.status]}`}>
+                                            {selectedItem.status?.replace('_', ' ')}
+                                        </span>
+                                        <span className="px-3 py-1 rounded-lg text-sm bg-gray-100 text-gray-700">
+                                            {selectedItem.device_type}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-3xl font-bold text-gray-900">{selectedItem.brand} {selectedItem.model}</h2>
+                                    <p className="text-gray-500 font-mono text-lg mt-1">SN: {selectedItem.serial_number}</p>
+                                </div>
+                                <button
+                                    onClick={() => deleteItem(selectedItem.id)}
+                                    className="text-red-500 hover:bg-red-50 p-2 rounded"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="flex gap-2 mt-4 pt-4 border-t">
+                                <select
+                                    value={selectedItem.grade}
+                                    onChange={e => updateItem(selectedItem.id, { grade: e.target.value })}
+                                    className="px-3 py-2 border rounded-lg text-sm"
+                                >
+                                    <option value="A">Grade A</option>
+                                    <option value="B">Grade B</option>
+                                    <option value="C">Grade C</option>
+                                </select>
+                                <select
+                                    value={selectedItem.status}
+                                    onChange={e => updateItem(selectedItem.id, { status: e.target.value })}
+                                    className="px-3 py-2 border rounded-lg text-sm"
+                                >
+                                    <option value="pending_triage">Pending Triage</option>
+                                    <option value="in_repair">In Repair</option>
+                                    <option value="ready_to_ship">Ready to Ship</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="scrapped">Scrapped</option>
+                                </select>
+                                <input
+                                    type="text"
+                                    value={selectedItem.location || ''}
+                                    onChange={e => updateItem(selectedItem.id, { location: e.target.value })}
+                                    placeholder="Location"
+                                    className="px-3 py-2 border rounded-lg text-sm flex-1"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Specs Grid */}
+                        <div className="grid grid-cols-2 gap-6">
+                            {/* Processor */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>⚡</span> Processor
+                                </h3>
+                                <p className="text-lg font-semibold text-gray-900 mb-2">{selectedItem.processor || 'Unknown'}</p>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">Cores:</span>
+                                        <span className="ml-2 font-medium">{selectedItem.processor_cores || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">Arch:</span>
+                                        <span className="ml-2 font-medium">{selectedItem.specs?.processor_architecture || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Memory */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>🧠</span> Memory
+                                </h3>
+                                <p className="text-3xl font-bold text-blue-600 mb-2">{selectedItem.ram_gb || 0} GB</p>
+                                <div className="text-sm text-gray-500">
+                                    {selectedItem.ram_type} @ {selectedItem.specs?.ram_speed_mhz || '-'} MHz
+                                </div>
+                            </div>
+
+                            {/* Storage */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>💾</span> Storage
+                                </h3>
+                                <p className="text-3xl font-bold text-purple-600 mb-2">{selectedItem.storage_gb || 0} GB</p>
+                                <div className="text-sm">
+                                    <span className={`px-2 py-1 rounded ${selectedItem.storage_type === 'SSD' ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}>
+                                        {selectedItem.storage_type || 'Unknown'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">{selectedItem.specs?.storage_model}</p>
+                            </div>
+
+                            {/* Graphics */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>🎮</span> Graphics
+                                </h3>
+                                <p className="text-lg font-semibold text-gray-900 mb-2">{selectedItem.graphics_card || 'Unknown'}</p>
+                                <div className="text-sm text-gray-500">
+                                    VRAM: {selectedItem.specs?.graphics_vram_mb || '-'} MB
+                                </div>
+                            </div>
+
+                            {/* Display */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>🖥️</span> Display
+                                </h3>
+                                <p className="text-lg font-semibold text-gray-900 mb-2">{selectedItem.screen_size || 'Unknown'}</p>
+                                <div className="text-sm text-gray-500">
+                                    Resolution: {selectedItem.screen_resolution || '-'}
+                                </div>
+                            </div>
+
+                            {/* Operating System */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>💿</span> Operating System
+                                </h3>
+                                <p className="text-lg font-semibold text-gray-900 mb-2">{selectedItem.os_name || 'Unknown'}</p>
+                                <div className="text-sm text-gray-500">
+                                    Version: {selectedItem.os_version || '-'}
+                                </div>
+                            </div>
+
+                            {/* Network */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>🌐</span> Network
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">MAC:</span>
+                                        <span className="ml-2 font-mono">{selectedItem.mac_address || '-'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">WiFi:</span>
+                                        <span className="ml-2">{selectedItem.specs?.wifi_adapter || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Battery */}
+                            <div className="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                    <span>🔋</span> Battery
+                                </h3>
+                                <p className="text-lg font-semibold text-gray-900 mb-2">
+                                    {selectedItem.has_battery ? 'Present' : 'No Battery'}
+                                </p>
+                                <div className="text-sm text-gray-500">
+                                    Status: {selectedItem.battery_status || '-'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Scan Info */}
+                        <div className="bg-gray-100 rounded-xl p-4 mt-6 text-sm text-gray-600">
+                            <div className="flex justify-between">
+                                <span>Scanned by: {selectedItem.scanned_by || 'Unknown'}</span>
+                                <span>Date: {selectedItem.scanned_at ? new Date(selectedItem.scanned_at).toLocaleString() : selectedItem.created_at ? new Date(selectedItem.created_at).toLocaleString() : '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                        <div className="text-center">
+                            <span className="text-6xl block mb-4">📦</span>
+                            <p className="text-xl">Select a device to view details</p>
+                            <p className="text-sm mt-2">Or use the PowerShell script to add new devices</p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
