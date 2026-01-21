@@ -310,7 +310,7 @@ try {
         Write-Host "All specs saved to database!"
         
         # Open in browser
-        $OpenUrl = "https://est-xml-generator.vercel.app/inventory?search=$serial"
+        $OpenUrl = "https://xmlproject.vercel.app/inventory?search=$serial"
         Write-Host ""
         Write-Host "Opening in browser..." -ForegroundColor Cyan
         Start-Process $OpenUrl

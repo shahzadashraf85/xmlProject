@@ -173,7 +173,7 @@ if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
     echo ""
     
     # Open in browser
-    OPEN_URL="https://est-xml-generator.vercel.app/inventory?search=$SERIAL"
+    OPEN_URL="https://xmlproject.vercel.app/inventory?search=$SERIAL"
     echo "Opening in browser..."
     if [[ "$OSTYPE" == "darwin"* ]]; then
         open "$OPEN_URL"
