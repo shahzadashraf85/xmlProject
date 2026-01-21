@@ -5,37 +5,21 @@
 
 # Prevent window from closing on error
 $ErrorActionPreference = "Stop"
-trap {
-    Write-Host ""
-    Write-Host "========================================" -ForegroundColor Red
-    Write-Host "   ✗ CRITICAL ERROR" -ForegroundColor Red
-    Write-Host "========================================" -ForegroundColor Red
-    Write-Host ""
-    Write-Host $_.Exception.Message -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "Common fixes:" -ForegroundColor Cyan
-    Write-Host "  1. Make sure you have internet connection" -ForegroundColor White
-    Write-Host "  2. Try running as Administrator" -ForegroundColor White
-    Write-Host "  3. Check if PowerShell version is 5.1 or higher" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Press any key to exit..." -ForegroundColor Gray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit 1
-}
 
-# YOUR API KEY (Already configured - don't change!)
-$API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
-$API_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device"
-
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "   LAPTEK DEVICE REGISTRATION" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Scanning device..." -ForegroundColor Yellow
-Write-Host ""
-
+# Use simple error handling wrapper
 try {
+    # YOUR API KEY
+    $API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
+    $API_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device"
+
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "   LAPTEK DEVICE REGISTRATION" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Scanning device..." -ForegroundColor Yellow
+    Write-Host ""
+
     # Get device information
     $info = Get-ComputerInfo
     $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
@@ -100,7 +84,7 @@ try {
     Write-Host ""
     Write-Host "Device registered: $serial" -ForegroundColor Cyan
     Write-Host ""
-    
+
 } catch {
     # Error handling
     Write-Host ""
@@ -125,5 +109,6 @@ try {
     Write-Host ""
 }
 
-Write-Host "Press any key to close..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+# Always pause at the end
+Write-Host "Press Enter to exit..." -ForegroundColor Gray
+$null = Read-Host
