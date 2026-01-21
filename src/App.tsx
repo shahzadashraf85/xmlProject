@@ -8,6 +8,7 @@ import History from './pages/History';
 import Inventory from './pages/Inventory';
 import Technician from './pages/Technician';
 import Messages from './pages/Messages';
+import RegisterDevice from './pages/RegisterDevice';
 
 function App() {
   return (
@@ -66,6 +67,17 @@ function App() {
               <ProtectedRoute>
                 <SidebarLayout>
                   <Messages />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/register"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <RegisterDevice />
                 </SidebarLayout>
               </ProtectedRoute>
             }
