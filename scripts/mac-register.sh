@@ -1,71 +1,150 @@
 #!/bin/bash
-# LapTek Device Auto-Registration Script for macOS/Linux
-# Make executable: chmod +x mac-register.sh
-# Run: ./mac-register.sh
+# ========================================
+#  LAPTEK DEVICE REGISTRATION (macOS/Linux)
+#  Enhanced for Full Spec Scanner
+# ========================================
+# Usage:
+# 1. chmod +x mac-register.sh
+# 2. ./mac-register.sh
 
 echo "========================================"
-echo "  LapTek Device Auto-Registration"
+echo "  LAPTEK FULL DEVICE SCANNER (Mac/Linux)"
 echo "========================================"
 echo ""
 
 # Configuration
 API_URL="https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device"
-API_KEY="YOUR_SUPABASE_ANON_KEY_HERE"  # Replace with your actual key
+API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
 
-echo "Detecting hardware specifications..."
+echo "Scanning detailed hardware specs..."
+echo "(This may take a few seconds)"
 echo ""
 
-# Detect OS Type
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS
-    BRAND=$(system_profiler SPHardwareDataType | grep "Model Name" | awk -F': ' '{print $2}' | awk '{print $1}')
-    MODEL=$(system_profiler SPHardwareDataType | grep "Model Identifier" | awk -F': ' '{print $2}')
-    SERIAL=$(system_profiler SPHardwareDataType | grep "Serial Number" | awk -F': ' '{print $2}')
-    CPU=$(system_profiler SPHardwareDataType | grep "Chip" | awk -F': ' '{print $2}')
-    if [ -z "$CPU" ]; then
-        CPU=$(system_profiler SPHardwareDataType | grep "Processor Name" | awk -F': ' '{print $2}')
-    fi
-    RAM=$(system_profiler SPHardwareDataType | grep "Memory" | awk -F': ' '{print $2}')
-    STORAGE=$(diskutil info / | grep "Disk Size" | awk -F': ' '{print $2}' | awk '{print $1, $2}')
-    OS_NAME=$(sw_vers -productName)
-    OS_VERSION=$(sw_vers -productVersion)
+    # ==================== macOS SCANNER ====================
     
+    # --- System Info ---
+    BRAND="Apple"
+    MODEL=$(sysctl -n hw.model)
+    MODEL_NAME=$(system_profiler SPHardwareDataType | awk -F': ' '/Model Name/ {print $2}')
+    SERIAL=$(system_profiler SPHardwareDataType | awk -F': ' '/Serial Number/ {print $2}')
+    UUID=$(system_profiler SPHardwareDataType | awk -F': ' '/Hardware UUID/ {print $2}')
+    
+    # --- Processor ---
+    CPU_NAME=$(sysctl -n machdep.cpu.brand_string)
+    CPU_CORES=$(sysctl -n hw.physicalcpu)
+    CPU_THREADS=$(sysctl -n hw.logicalcpu)
+    CPU_ARCH="64-bit" # Apple Silicon/Intel recent are all 64
+    
+    # --- Memory ---
+    RAM_BYTES=$(sysctl -n hw.memsize)
+    RAM_GB=$((RAM_BYTES / 1024 / 1024 / 1024))
+    RAM_TYPE=$(system_profiler SPMemoryDataType | awk -F': ' '/Type/ {print $2}' | head -1)
+    RAM_SPEED=$(system_profiler SPMemoryDataType | awk -F': ' '/Speed/ {print $2}' | head -1)
+    
+    # --- Storage ---
+    # Get main disk info
+    DISK_SIZE_BYTES=$(diskutil info / | grep "Disk Size" | awk -F'(' '{print $2}' | awk '{print $1}')
+    STORAGE_GB=$((DISK_SIZE_BYTES / 1000 / 1000 / 1000))
+    STORAGE_MODEL=$(diskutil info / | grep "Device / Media Name" | awk -F': ' '{print $2}' | xargs)
+    STORAGE_TYPE="SSD" # Most Macs have SSDs now, checking protocol for NVMe/SATA
+    PROTOCOL=$(diskutil info / | grep "Protocol" | awk -F': ' '{print $2}' | xargs)
+    if [[ "$PROTOCOL" == *"SATA"* ]] && [[ "$STORAGE_MODEL" != *"SSD"* ]]; then
+        STORAGE_TYPE="HDD"
+    fi
+    
+    # --- Graphics ---
+    GPU_NAME=$(system_profiler SPDisplaysDataType | awk -F': ' '/Chipset Model/ {print $2}' | head -1)
+    VRAM=$(system_profiler SPDisplaysDataType | awk -F': ' '/VRAM/ {print $2}' | head -1)
+    # Convert VRAM to pure MB number if needed, simple grep for now
+    DISPLAY_RES=$(system_profiler SPDisplaysDataType | awk -F': ' '/Resolution/ {print $2}' | head -1)
+    
+    # --- OS ---
+    OS_NAME="macOS"
+    OS_VERSION=$(sw_vers -productVersion)
+    OS_BUILD=$(sw_vers -buildVersion)
+    
+    # --- Network ---
+    MAC_ADDR=$(ifconfig en0 | awk '/ether/ {print $2}')
+    WIFI_NAME=$(networksetup -listallhardwareports | grep -A 1 Wi-Fi | tail -1 | awk '{print $2}')
+    
+    # --- Battery ---
+    HAS_BATTERY="false"
+    BATTERY_STATUS="No Battery"
+    if system_profiler SPPowerDataType | grep -q "Battery Information"; then
+        HAS_BATTERY="true"
+        cycle_count=$(system_profiler SPPowerDataType | grep "Cycle Count" | awk -F': ' '{print $2}')
+        condition=$(system_profiler SPPowerDataType | grep "Condition" | awk -F': ' '{print $2}')
+        BATTERY_STATUS="Cycle: $cycle_count, Condition: $condition"
+    fi
+
 else
-    # Linux
+    # ==================== LINUX SCANNER ====================
+    # Fallback for Linux (simplified)
     BRAND=$(sudo dmidecode -s system-manufacturer 2>/dev/null || echo "Unknown")
     MODEL=$(sudo dmidecode -s system-product-name 2>/dev/null || echo "Unknown")
     SERIAL=$(sudo dmidecode -s system-serial-number 2>/dev/null || echo "Unknown")
-    CPU=$(lscpu | grep "Model name" | awk -F': ' '{print $2}' | xargs)
-    RAM=$(free -h | grep "Mem:" | awk '{print $2}')
-    STORAGE=$(df -h / | tail -1 | awk '{print $2}')
-    OS_NAME=$(lsb_release -d 2>/dev/null | awk -F'\t' '{print $2}' || cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)
-    OS_VERSION=$(uname -r)
+    
+    CPU_NAME=$(lscpu | grep "Model name" | awk -F': ' '{print $2}' | xargs)
+    RAM_GB=$(free -g | grep "Mem:" | awk '{print $2}')
+    STORAGE_GB=$(df -bg / | tail -1 | awk '{print $2}' | tr -d 'G')
+    
+    OS_NAME=$(lsb_release -d 2>/dev/null | awk -F'\t' '{print $2}' || echo "Linux")
+    MAC_ADDR=$(cat /sys/class/net/*/address | head -1)
 fi
 
-# Display Detected Info
-echo "Detected Information:"
-echo "  Brand:        $BRAND"
-echo "  Model:        $MODEL"
+# ==================== DISPLAY DETECTED INFO ====================
+echo "DETECTED SPECIFICATIONS:"
+echo "----------------------------------------"
+echo "  Model:        $BRAND $MODEL ($MODEL_NAME)"
 echo "  Serial:       $SERIAL"
-echo "  CPU:          $CPU"
-echo "  RAM:          $RAM"
-echo "  Storage:      $STORAGE"
-echo "  OS:           $OS_NAME $OS_VERSION"
+echo "  CPU:          $CPU_NAME ($CPU_CORES Cores)"
+echo "  RAM:          ${RAM_GB}GB $RAM_TYPE"
+echo "  Storage:      ${STORAGE_GB}GB $STORAGE_TYPE"
+echo "  GPU:          $GPU_NAME ($VRAM)"
+echo "  Display:      $DISPLAY_RES"
+echo "  OS:           $OS_NAME $OS_VERSION ($OS_BUILD)"
+echo "  Battery:      $BATTERY_STATUS"
+echo "----------------------------------------"
 echo ""
 
-# Prepare JSON Payload
+# Validation for generic serials
+if [[ "$SERIAL" == *"System Serial"* ]] || [[ "$SERIAL" == *"To Be Filled"* ]] || [[ -z "$SERIAL" ]]; then
+    echo "⚠️  WARNING: Generic/Empty serial number detected!"
+    read -p "Enter REAL Serial Number from sticker: " SERIAL
+fi
+
+# Prepare JSON Payload with simplified structure to match PS1 logic manually
+# Note: Bash JSON construction can be messy, manual string building here
 JSON_PAYLOAD=$(cat <<EOF
 {
   "brand": "$BRAND",
-  "model": "$MODEL",
+  "model": "$MODEL_NAME",
   "serial_number": "$SERIAL",
   "device_type": "LAPTOP",
   "grade": "B",
   "specs": {
-    "processor": "$CPU",
-    "ram": "$RAM",
-    "storage": "$STORAGE",
-    "os": "$OS_NAME $OS_VERSION"
+    "manufacturer": "$BRAND",
+    "model_number": "$MODEL",
+    "processor": "$CPU_NAME",
+    "processor_cores": $CPU_CORES,
+    "processor_threads": $CPU_THREADS,
+    "ram_gb": $RAM_GB,
+    "ram_type": "$RAM_TYPE",
+    "storage_gb": $STORAGE_GB,
+    "storage_type": "$STORAGE_TYPE",
+    "storage_model": "$STORAGE_MODEL",
+    "graphics_card": "$GPU_NAME",
+    "graphics_vram_mb": 0,
+    "screen_resolution": "$DISPLAY_RES",
+    "os_name": "$OS_NAME",
+    "os_version": "$OS_VERSION",
+    "os_build": "$OS_BUILD",
+    "mac_address": "$MAC_ADDR",
+    "has_battery": $HAS_BATTERY,
+    "battery_status": "$BATTERY_STATUS",
+    "scanned_by": "$USER",
+    "computer_name": "$(hostname)"
   },
   "status": "pending_triage",
   "location": "Receiving"
@@ -73,7 +152,7 @@ JSON_PAYLOAD=$(cat <<EOF
 EOF
 )
 
-echo "Uploading to LapTek Inventory System..."
+echo "Uploading to LapTek Inventory..."
 echo ""
 
 # Send to API
@@ -84,31 +163,30 @@ HTTP_CODE=$(curl -s -o /tmp/laptek_response.txt -w "%{http_code}" \
   -H "Content-Type: application/json" \
   -d "$JSON_PAYLOAD")
 
+RESPONSE_BODY=$(cat /tmp/laptek_response.txt)
+
 if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
     echo "========================================"
-    echo "  ✓ REGISTRATION SUCCESSFUL!"
+    echo "   ✓ SUCCESS!"
     echo "========================================"
-    echo ""
-    echo "Device has been added to inventory."
-    echo "Serial Number: $SERIAL"
+    echo "Device registered: $SERIAL"
     echo ""
 else
     echo "========================================"
-    echo "  ✗ REGISTRATION FAILED"
+    echo "   ✗ ERROR (Code: $HTTP_CODE)"
     echo "========================================"
     echo ""
-    echo "HTTP Status Code: $HTTP_CODE"
-    echo "Response: $(cat /tmp/laptek_response.txt)"
+    echo "Server Response:"
+    echo "$RESPONSE_BODY"
     echo ""
-    echo "Please check:"
-    echo "  1. Internet connection is active"
-    echo "  2. API_KEY is configured in the script"
-    echo "  3. Supabase Edge Function is deployed"
-    echo ""
+    if [[ "$HTTP_CODE" -eq 409 ]]; then
+        echo "This device is ALREADY registered!"
+    fi
 fi
 
 # Cleanup
 rm -f /tmp/laptek_response.txt
 
+echo ""
 echo "Press Enter to exit..."
 read
