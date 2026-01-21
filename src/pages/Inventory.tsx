@@ -148,9 +148,13 @@ export default function Inventory() {
         'scrapped': 'bg-gray-100 text-gray-800',
     };
 
-    // Helper to get spec value
-    const getSpec = (item: InventoryItem, key: keyof InventoryItem['specs']) => {
-        return item.specs?.[key] ?? '-';
+    // Helper to get spec value (only primitive types)
+    const getSpec = (item: InventoryItem, key: keyof InventoryItem['specs']): string | number => {
+        const value = item.specs?.[key];
+        if (value === undefined || value === null) return '-';
+        if (typeof value === 'string' || typeof value === 'number') return value;
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+        return '-';
     };
 
     return (
