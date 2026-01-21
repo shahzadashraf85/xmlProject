@@ -132,9 +132,6 @@ export default function Inventory() {
             setSelectedItem({ ...selectedItem, ...editForm } as InventoryItem);
             setItems(items.map(i => i.id === selectedItem.id ? { ...i, ...editForm } as InventoryItem : i));
             setIsEditing(false);
-
-            // Show success toast or animation? For now alert is fine or just silent success
-            // alert('Saved!');
         } catch (err) {
             alert('Error updating item');
         }
@@ -336,167 +333,129 @@ export default function Inventory() {
                 </div>
             </div>
 
-            {/* RIGHT MAIN: Device Layout */}
-            <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
+            {/* RIGHT MAIN: Device Layout (COMPACT) */}
+            <div className="flex-1 overflow-y-auto bg-gray-50/50 p-4">
                 {selectedItem ? (
-                    <div className="max-w-5xl mx-auto space-y-6">
+                    <div className="max-w-full mx-auto space-y-3">
 
-                        {/* 1. TOP CARD: Quick Actions & Status */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                                <span className="text-9xl">💻</span>
-                            </div>
-
-                            <div className="relative z-10">
-                                {/* Header Row */}
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-3">
-                                            <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-gray-500 bg-gray-100 rounded-lg">
-                                                {selectedItem.device_type}
-                                            </span>
-                                            <span className="text-gray-300">|</span>
-                                            <span className="text-sm font-mono text-gray-400">
-                                                ID: {selectedItem.id.slice(0, 8)}
-                                            </span>
-                                        </div>
-                                        {isEditing ? (
-                                            <div className="flex gap-2 items-center mt-2">
-                                                <input
-                                                    className="text-3xl font-bold text-gray-900 border-b-2 border-blue-500 focus:outline-none bg-transparent w-full"
-                                                    value={editForm.brand}
-                                                    onChange={e => setEditForm({ ...editForm, brand: e.target.value })}
-                                                    placeholder="Brand"
-                                                />
-                                                <input
-                                                    className="text-3xl font-bold text-gray-900 border-b-2 border-blue-500 focus:outline-none bg-transparent w-full"
-                                                    value={editForm.model}
-                                                    onChange={e => setEditForm({ ...editForm, model: e.target.value })}
-                                                    placeholder="Model"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                                                {selectedItem.brand} <span className="text-gray-600 font-medium">{selectedItem.model}</span>
-                                            </h1>
-                                        )}
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-gray-500 font-mono text-base">SN: {selectedItem.serial_number}</span>
-                                            {selectedItem.specs?.part_number && (
-                                                <span className="text-gray-400 text-sm"> / PN: {selectedItem.specs.part_number}</span>
-                                            )}
-                                        </div>
+                        {/* 1. TOP CARD: Compact Header */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
+                            <div className="flex justify-between items-start gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 rounded">
+                                            {selectedItem.device_type}
+                                        </span>
+                                        <span className="text-gray-300">|</span>
+                                        <span className="text-xs font-mono text-gray-400">
+                                            SN: {selectedItem.serial_number}
+                                        </span>
                                     </div>
 
-                                    <div className="flex gap-2">
-                                        {!isEditing ? (
-                                            <button
-                                                onClick={() => setIsEditing(true)}
-                                                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-sm"
-                                            >
-                                                ✏️ Edit Details
-                                            </button>
-                                        ) : (
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => setIsEditing(false)}
-                                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl text-sm font-medium"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={saveChanges}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 shadow-md transition-colors"
-                                                >
-                                                    💾 Save Changes
-                                                </button>
-                                            </div>
-                                        )}
-                                        <button
-                                            onClick={() => deleteItem(selectedItem.id)}
-                                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                                            title="Delete Device"
-                                        >
-                                            🗑️
+                                    {isEditing ? (
+                                        <div className="flex gap-2 items-center">
+                                            <input
+                                                className="text-xl font-bold text-gray-900 border-b border-blue-500 focus:outline-none bg-transparent w-32"
+                                                value={editForm.brand}
+                                                onChange={e => setEditForm({ ...editForm, brand: e.target.value })}
+                                            />
+                                            <input
+                                                className="text-xl font-bold text-gray-900 border-b border-blue-500 focus:outline-none bg-transparent flex-1"
+                                                value={editForm.model}
+                                                onChange={e => setEditForm({ ...editForm, model: e.target.value })}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <h1 className="text-2xl font-bold text-gray-900 truncate">
+                                            {selectedItem.brand} <span className="text-gray-600 font-medium">{selectedItem.model}</span>
+                                        </h1>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2 flex-shrink-0">
+                                    {!isEditing ? (
+                                        <button onClick={() => setIsEditing(true)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded text-xs border border-gray-200">
+                                            ✏️ Edit
                                         </button>
+                                    ) : (
+                                        <>
+                                            <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded border border-gray-200">Cancel</button>
+                                            <button onClick={saveChanges} className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm">Save</button>
+                                        </>
+                                    )}
+                                    <button onClick={() => deleteItem(selectedItem.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Ultra Compact Controls */}
+                            <div className="flex gap-4 mt-3 pt-3 border-t border-gray-100 items-center">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400">Grade</span>
+                                    <div className="flex bg-gray-50 rounded p-0.5 border border-gray-200">
+                                        {['A', 'B', 'C'].map(g => (
+                                            <button
+                                                key={g}
+                                                onClick={() => updateField(selectedItem.id, { grade: g })}
+                                                className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center transition-all ${selectedItem.grade === g
+                                                        ? g === 'A' ? 'bg-green-500 text-white' : g === 'B' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'
+                                                        : 'text-gray-400 hover:text-gray-600'
+                                                    }`}
+                                            >
+                                                {g}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {/* Control Panel */}
-                                <div className="bg-gray-50 rounded-xl p-5 border border-gray-100 flex flex-wrap gap-8 items-center">
-                                    {/* Grade Buttons */}
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Grading</label>
-                                        <div className="flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
-                                            {['A', 'B', 'C'].map(g => (
-                                                <button
-                                                    key={g}
-                                                    onClick={() => updateField(selectedItem.id, { grade: g })}
-                                                    className={`w-12 h-10 rounded-md font-bold text-lg flex items-center justify-center transition-all ${selectedItem.grade === g
-                                                        ? g === 'A' ? 'bg-green-500 text-white shadow-md' : g === 'B' ? 'bg-yellow-500 text-white shadow-md' : 'bg-red-500 text-white shadow-md'
-                                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
-                                                        }`}
-                                                >
-                                                    {g}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                <div className="h-4 w-px bg-gray-200"></div>
 
-                                    {/* Status Selector */}
-                                    <div className="space-y-2 min-w-[200px]">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Status</label>
-                                        <div className="relative">
-                                            <select
-                                                value={selectedItem.status}
-                                                onChange={e => updateField(selectedItem.id, { status: e.target.value })}
-                                                className="w-full appearance-none bg-white border border-gray-200 text-gray-700 py-2.5 pl-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-blue-500 font-medium shadow-sm transition-shadow hover:border-gray-300"
-                                            >
-                                                <option value="pending_triage">🟠 Pending Triage</option>
-                                                <option value="in_repair">🔵 In Repair</option>
-                                                <option value="ready_to_ship">🟢 Ready to Ship</option>
-                                                <option value="shipped">🟣 Shipped</option>
-                                                <option value="scrapped">⚫ Scrapped</option>
-                                            </select>
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                                                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400">Status</span>
+                                    <select
+                                        value={selectedItem.status}
+                                        onChange={e => updateField(selectedItem.id, { status: e.target.value })}
+                                        className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 cursor-pointer hover:text-blue-600 p-0"
+                                    >
+                                        <option value="pending_triage">🟠 Pending Triage</option>
+                                        <option value="in_repair">🔵 In Repair</option>
+                                        <option value="ready_to_ship">🟢 Ready to Ship</option>
+                                        <option value="shipped">🟣 Shipped</option>
+                                        <option value="scrapped">⚫ Scrapped</option>
+                                    </select>
+                                </div>
 
-                                    {/* Location Input */}
-                                    <div className="space-y-2 flex-1">
-                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Location</label>
-                                        <div className="relative">
-                                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">📍</span>
-                                            <input
-                                                type="text"
-                                                defaultValue={selectedItem.location || ''}
-                                                onBlur={e => updateField(selectedItem.id, { location: e.target.value })}
-                                                placeholder="Shelf / Bin ID"
-                                                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 hover:border-gray-300 transition-colors"
-                                            />
-                                        </div>
-                                    </div>
+                                <div className="h-4 w-px bg-gray-200"></div>
+
+                                <div className="flex items-center gap-2 flex-1">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400">Loc</span>
+                                    <input
+                                        type="text"
+                                        defaultValue={selectedItem.location || ''}
+                                        onBlur={e => updateField(selectedItem.id, { location: e.target.value })}
+                                        placeholder="Shelf ID..."
+                                        className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 p-0 w-full placeholder-gray-300"
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        {/* 2. SPECS GRID */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {/* 2. COMPACT SPECS GRID (4 Columns) */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                             {/* Card Component Helper */}
                             {[
                                 {
-                                    title: "Core Performance",
+                                    title: "CPU",
                                     icon: "⚡",
                                     main: getSpec(selectedItem, 'processor'),
-                                    sub: `${getSpec(selectedItem, 'processor_cores')} Cores • ${getSpec(selectedItem, 'processor_speed_mhz')} MHz`
+                                    sub: `${getSpec(selectedItem, 'processor_cores')}C / ${getSpec(selectedItem, 'processor_threads')}T @ ${getSpec(selectedItem, 'processor_speed_mhz')}MHz`
                                 },
                                 {
-                                    title: "Memory (RAM)",
+                                    title: "RAM",
                                     icon: "🧠",
                                     main: `${getSpec(selectedItem, 'ram_gb')} GB`,
-                                    sub: `${getSpec(selectedItem, 'ram_type')} • ${getSpec(selectedItem, 'ram_speed_mhz')} MHz`,
+                                    sub: `${getSpec(selectedItem, 'ram_type')} • ${getSpec(selectedItem, 'ram_slots')} Slots`,
                                     highlight: true,
                                     color: "blue"
                                 },
@@ -513,7 +472,7 @@ export default function Inventory() {
                                     icon: "🎮",
                                     main: getSpec(selectedItem, 'graphics_card'),
                                     itemized: selectedItem.specs?.all_gpus,
-                                    sub: `${selectedItem.specs?.graphics_vram_mb || 0} MB VRAM`
+                                    sub: `${selectedItem.specs?.graphics_vram_mb || 0} MB`
                                 },
                                 {
                                     title: "Display",
@@ -522,78 +481,58 @@ export default function Inventory() {
                                     sub: `${getSpec(selectedItem, 'screen_resolution')}`
                                 },
                                 {
-                                    title: "System",
+                                    title: "OS",
                                     icon: "💿",
                                     main: getSpec(selectedItem, 'os_name'),
-                                    sub: `${getSpec(selectedItem, 'os_version')} (${getSpec(selectedItem, 'os_architecture')})`
+                                    sub: getSpec(selectedItem, 'os_version')
                                 },
                                 {
                                     title: "Network",
                                     icon: "🌐",
-                                    // Complex render for network
+                                    main: "MAC / WiFi",
                                     custom: (
-                                        <div className="space-y-2 mt-2">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-500">MAC</span>
-                                                <span className="font-mono text-gray-900">{getSpec(selectedItem, 'mac_address')}</span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-500">WiFi</span>
-                                                <span className="text-gray-900 truncate max-w-[150px]" title={String(getSpec(selectedItem, 'wifi_adapter'))}>{getSpec(selectedItem, 'wifi_adapter')}</span>
-                                            </div>
+                                        <div className="space-y-1 mt-1 text-[10px]">
+                                            <div className="flex justify-between"><span className="text-gray-400">MAC</span> <span className="font-mono">{getSpec(selectedItem, 'mac_address')}</span></div>
+                                            <div className="flex justify-between gap-2 ml-0"><span className="text-gray-400">WiFi</span> <span className="truncate">{getSpec(selectedItem, 'wifi_adapter')}</span></div>
                                         </div>
                                     )
                                 },
                                 {
-                                    title: "Battery & Power",
+                                    title: "Power",
                                     icon: "🔋",
-                                    main: selectedItem.specs?.has_battery ? "Battery Present" : "No Battery",
-                                    sub: `Status: ${getSpec(selectedItem, 'battery_status')}`
-                                },
-                                {
-                                    title: "Motherboard",
-                                    icon: "🔧",
-                                    main: getSpec(selectedItem, 'motherboard'),
-                                    sub: `BIOS: ${getSpec(selectedItem, 'bios_version')}`
+                                    main: selectedItem.specs?.has_battery ? "Yes" : "No",
+                                    sub: getSpec(selectedItem, 'battery_status')
                                 }
                             ].map((card, idx) => (
-                                <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:border-gray-300 transition-colors">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="text-lg">{card.icon}</span>
-                                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{card.title}</h3>
+                                <div key={idx} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:border-gray-300 transition-colors flex flex-col justify-center min-h-[90px]">
+                                    <div className="flex items-center gap-1.5 mb-1.5 opacity-60">
+                                        <span className="text-sm">{card.icon}</span>
+                                        <h3 className="text-[10px] font-bold uppercase tracking-wider">{card.title}</h3>
                                     </div>
 
                                     {card.custom ? card.custom : (
                                         <>
                                             {card.highlight ? (
-                                                <p className={`text-3xl font-bold text-${card.color || 'gray'}-600 mb-1`}>{card.main}</p>
+                                                <p className={`text-xl font-bold text-${card.color || 'gray'}-600 leading-tight`}>{card.main}</p>
                                             ) : (
-                                                <p className="font-semibold text-gray-900 text-lg leading-tight mb-1">{card.main}</p>
+                                                <p className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2" title={String(card.main)}>{card.main}</p>
                                             )}
 
                                             {/* Itemized Lists (Storage/GPUs) */}
                                             {card.itemized && Array.isArray(card.itemized) && card.itemized.length > 0 ? (
-                                                <div className="space-y-2 mt-3">
-                                                    {card.itemized.map((subItem: any, i: number) => (
-                                                        <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs border border-gray-100">
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <span className="font-bold text-gray-700">
-                                                                    {subItem.size_gb ? `${subItem.size_gb} GB` : subItem.name}
-                                                                </span>
-                                                                {subItem.type && (
-                                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${subItem.type === 'SSD' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                                                                        {subItem.type}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-gray-500 truncate" title={subItem.model || subItem.driver}>
-                                                                {subItem.model || subItem.driver}
-                                                            </div>
+                                                <div className="space-y-1 mt-1.5">
+                                                    {card.itemized.slice(0, 2).map((subItem: any, i: number) => (
+                                                        <div key={i} className="flex justify-between items-center text-[10px] bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                                                            <span className="font-semibold truncate max-w-[80px]">
+                                                                {subItem.size_gb ? `${subItem.size_gb}GB` : subItem.name}
+                                                            </span>
+                                                            {subItem.type && <span className="opacity-60">{subItem.type}</span>}
                                                         </div>
                                                     ))}
+                                                    {card.itemized.length > 2 && <div className="text-[9px] text-gray-400 pl-1">+{card.itemized.length - 2} more...</div>}
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-gray-500">{card.sub}</p>
+                                                <p className="text-[11px] text-gray-500 mt-0.5">{card.sub}</p>
                                             )}
                                         </>
                                     )}
@@ -602,22 +541,15 @@ export default function Inventory() {
                         </div>
 
                         {/* Audit Log Footer */}
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs text-gray-500 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <span>🔍</span>
-                                <span>Scanned by <strong className="text-gray-700">{selectedItem.specs?.scanned_by || 'Unknown'}</strong></span>
-                                <span>on computer <strong className="text-gray-700">{selectedItem.specs?.computer_name || 'Unknown'}</strong></span>
-                            </div>
-                            <div>
-                                Added: {new Date(selectedItem.created_at).toLocaleString()}
-                            </div>
+                        <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-2 text-[10px] text-gray-400 flex justify-between items-center">
+                            <span>Scanned by <strong className="text-gray-600">{selectedItem.specs?.scanned_by || '-'}</strong> on <strong className="text-gray-600">{selectedItem.specs?.computer_name || '-'}</strong></span>
+                            <span>{new Date(selectedItem.created_at).toLocaleString()}</span>
                         </div>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400 opacity-60">
-                        <span className="text-8xl mb-4 grayscale">💻</span>
-                        <p className="text-xl font-medium">Select a device to view details</p>
-                        <p className="text-sm mt-2 max-w-xs text-center">Click on any device in the list to inspect hardware specifications and manage inventory.</p>
+                        <span className="text-6xl mb-4 grayscale">💻</span>
+                        <p className="text-sm font-medium">Select device</p>
                     </div>
                 )}
             </div>
