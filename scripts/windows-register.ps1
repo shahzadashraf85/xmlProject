@@ -48,8 +48,25 @@ try {
 
 } catch {
     Write-Host "✗ Authentication Failed!" -ForegroundColor Red
+    
+    # Try to extract more detailed error from the response body
+    $detailedError = ""
+    try {
+        $stream = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($stream)
+        $detailedError = $reader.ReadToEnd()
+        $reader.Close()
+    } catch {}
+
+    if ($detailedError) {
+        Write-Host "Server Response: $detailedError" -ForegroundColor Red
+    } else {
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+
+    Write-Host ""
     Write-Host "Check your email/password and try again." -ForegroundColor Yellow
-    Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "(Note: Use your full email address, e.g., user@example.com)" -ForegroundColor White
     Write-Host ""
     Write-Host "Press any key to exit..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
