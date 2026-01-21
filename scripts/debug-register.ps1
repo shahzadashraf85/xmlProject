@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 
 try {
     $SUPABASE_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co"
-    $API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhxc2F0d3l0anp2bGhkbWNrZnNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU1MDU2NTAsImV4cCI6MjA1MTA4MTY1MH0.sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
+    $API_KEY = "sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J"
 
     Write-Host "--- DEBUG MODE ---"
     $authEmail = Read-Host "Email"
