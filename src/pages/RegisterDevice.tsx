@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
 
 export default function RegisterDevice() {
-    const { user } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [scanned, setScanned] = useState(false);
 
     // Detected Specs State
     const [specs, setSpecs] = useState({
@@ -72,7 +69,6 @@ export default function RegisterDevice() {
             resolution: `${window.screen.width}x${window.screen.height}`,
             browser: getBrowserName(ua)
         });
-        setScanned(true);
     }
 
     function getBrowserName(ua: string) {
