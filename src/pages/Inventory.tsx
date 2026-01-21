@@ -65,6 +65,14 @@ export default function Inventory() {
 
     useEffect(() => {
         loadInventory();
+
+        // Read search param from URL
+        const params = new URLSearchParams(window.location.search);
+        const search = params.get('search');
+        if (search) {
+            setSearchTerm(search);
+        }
+
         const subscription = supabase
             .channel('inventory_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory_items' }, () => {
@@ -286,8 +294,8 @@ export default function Inventory() {
                                     key={item.id}
                                     onClick={() => setSelectedItem(item)}
                                     className={`group p-4 cursor-pointer transition-all hover:bg-gray-50 border-l-4 ${selectedItem?.id === item.id
-                                            ? 'bg-blue-50/50 border-blue-600'
-                                            : 'border-transparent'
+                                        ? 'bg-blue-50/50 border-blue-600'
+                                        : 'border-transparent'
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-1.5">
@@ -425,8 +433,8 @@ export default function Inventory() {
                                                     key={g}
                                                     onClick={() => updateField(selectedItem.id, { grade: g })}
                                                     className={`w-12 h-10 rounded-md font-bold text-lg flex items-center justify-center transition-all ${selectedItem.grade === g
-                                                            ? g === 'A' ? 'bg-green-500 text-white shadow-md' : g === 'B' ? 'bg-yellow-500 text-white shadow-md' : 'bg-red-500 text-white shadow-md'
-                                                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                                                        ? g === 'A' ? 'bg-green-500 text-white shadow-md' : g === 'B' ? 'bg-yellow-500 text-white shadow-md' : 'bg-red-500 text-white shadow-md'
+                                                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                                                         }`}
                                                 >
                                                     {g}

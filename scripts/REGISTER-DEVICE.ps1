@@ -308,6 +308,12 @@ try {
         Write-Host ""
         Write-Host "Device registered: $serial"
         Write-Host "All specs saved to database!"
+        
+        # Open in browser
+        $OpenUrl = "https://est-xml-generator.vercel.app/inventory?search=$serial"
+        Write-Host ""
+        Write-Host "Opening in browser..." -ForegroundColor Cyan
+        Start-Process $OpenUrl
     }
     catch {
         $statusCode = $_.Exception.Response.StatusCode.value__

@@ -171,6 +171,15 @@ if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
     echo "========================================"
     echo "Device registered: $SERIAL"
     echo ""
+    
+    # Open in browser
+    OPEN_URL="https://est-xml-generator.vercel.app/inventory?search=$SERIAL"
+    echo "Opening in browser..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        open "$OPEN_URL"
+    else
+        xdg-open "$OPEN_URL" 2>/dev/null || echo "Please visit: $OPEN_URL"
+    fi
 else
     echo "========================================"
     echo "   ✗ ERROR (Code: $HTTP_CODE)"
