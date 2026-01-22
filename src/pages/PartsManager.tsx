@@ -75,7 +75,7 @@ export default function PartsManager() {
         }
     }
 
-    // Enhanced AI parsing
+    // Enhanced AI parsing - detects MULTIPLE parts from one input
     function parseAIText() {
         if (!aiText.trim()) {
             setMessage({ type: 'error', text: 'Please enter a description first.' });
@@ -83,101 +83,98 @@ export default function PartsManager() {
         }
 
         const text = aiText.toLowerCase();
-        let detectedPartName = '';
-        let detectedPartNumber = '';
+        const detectedParts: Array<{ name: string, number: string }> = [];
 
-        // Part Name Detection (expanded patterns)
+        // Fuzzy part name patterns (handles typos/variations)
         const partPatterns = [
-            { keywords: ['battery', 'batteries'], name: 'Battery' },
-            { keywords: ['screen', 'display', 'lcd', 'panel'], name: 'Screen' },
-            { keywords: ['keyboard', 'keys'], name: 'Keyboard' },
-            { keywords: ['charger', 'adapter', 'power supply', 'ac adapter'], name: 'Charger' },
-            { keywords: ['ram', 'memory', 'dimm'], name: 'RAM' },
-            { keywords: ['ssd', 'hard drive', 'hdd', 'storage', 'disk'], name: 'Storage Drive' },
-            { keywords: ['motherboard', 'mainboard', 'logic board'], name: 'Motherboard' },
-            { keywords: ['fan', 'cooling'], name: 'Cooling Fan' },
-            { keywords: ['hinge', 'hinges'], name: 'Hinge' },
-            { keywords: ['touchpad', 'trackpad'], name: 'Touchpad' },
-            { keywords: ['webcam', 'camera'], name: 'Webcam' },
-            { keywords: ['wifi', 'wireless card', 'network card'], name: 'WiFi Card' },
-            { keywords: ['speaker', 'speakers'], name: 'Speaker' },
-            { keywords: ['cable', 'flex cable'], name: 'Cable' },
-            { keywords: ['bezel', 'cover'], name: 'Cover/Bezel' }
+            { fuzzy: ['battery', 'battry', 'battary', 'batry', 'batt', 'batteries'], canonical: 'Battery' },
+            { fuzzy: ['screen', 'scren', 'scrn', 'display', 'lcd', 'panel', 'monitor'], canonical: 'Screen' },
+            { fuzzy: ['keyboard', 'keybaord', 'keybord', 'keys', 'kb'], canonical: 'Keyboard' },
+            { fuzzy: ['charger', 'chargr', 'adapter', 'adaptr', 'power supply'], canonical: 'Charger' },
+            { fuzzy: ['ram', 'memory', 'dimm', 'memry'], canonical: 'RAM' },
+            { fuzzy: ['ssd', 'hard drive', 'hdd', 'storage', 'disk'], canonical: 'Storage Drive' },
+            { fuzzy: ['motherboard', 'mobo', 'mainboard'], canonical: 'Motherboard' },
+            { fuzzy: ['fan', 'cooling', 'cooler'], canonical: 'Cooling Fan' },
+            { fuzzy: ['hinge', 'hinges', 'hing'], canonical: 'Hinge' },
+            { fuzzy: ['touchpad', 'trackpad', 'mousepad', 'pad'], canonical: 'Touchpad' },
+            { fuzzy: ['webcam', 'camera', 'cam'], canonical: 'Webcam' },
+            { fuzzy: ['wifi', 'wireless', 'network card'], canonical: 'WiFi Card' },
+            { fuzzy: ['speaker', 'speakers', 'spkr'], canonical: 'Speaker' },
+            { fuzzy: ['cable', 'flex cable', 'wire'], canonical: 'Cable' },
+            { fuzzy: ['bezel', 'cover', 'case'], canonical: 'Cover/Bezel' }
         ];
 
-        for (const pattern of partPatterns) {
-            if (pattern.keywords.some(keyword => text.includes(keyword))) {
-                detectedPartName = pattern.name;
-                break;
+        // Split input by common delimiters (comma, newline, semicolon)
+        const lines = text.split(/[,\n;]+/).map(l => l.trim()).filter(l => l);
+
+        for (const line of lines) {
+            let partName = '';
+            let partNumber = '';
+
+            // Find part name using fuzzy matching
+            for (const pattern of partPatterns) {
+                if (pattern.fuzzy.some(keyword => line.includes(keyword))) {
+                    partName = pattern.canonical;
+                    break;
+                }
+            }
+
+            // Extract part number from this line
+            let partNumMatch = line.match(/\b[A-Z0-9]{2,}[-_]?[A-Z0-9]{2,}[-_]?[A-Z0-9]*\b/i);
+            if (!partNumMatch) partNumMatch = line.match(/\b[0-9]{4,}\b/);
+            if (partNumMatch) partNumber = partNumMatch[0].toUpperCase();
+
+            // Add to detected parts if we found something
+            if (partName || partNumber) {
+                detectedParts.push({ name: partName || 'Unknown Part', number: partNumber });
             }
         }
 
-        // Part Number Detection (multiple patterns)
-        // Pattern 1: Standard alphanumeric with dashes (e.g., L15L4PC0, PA-1650-78)
-        let partNumMatch = text.match(/\b[A-Z0-9]{2,}[-_][A-Z0-9]{2,}[-_]?[A-Z0-9]*\b/i);
-
-        // Pattern 2: Simple alphanumeric codes (e.g., L15L4PC0)
-        if (!partNumMatch) {
-            partNumMatch = text.match(/\b[A-Z]{1,3}[0-9]{2,}[A-Z0-9]{2,}\b/i);
-        }
-
-        // Pattern 3: Part number after keywords
-        if (!partNumMatch) {
-            const afterPartNum = text.match(/(?:part\s*(?:number|#|num)?|p\/n|pn|model)\s*:?\s*([A-Z0-9-_]{4,})/i);
-            if (afterPartNum) partNumMatch = [afterPartNum[1]];
-        }
-
-        if (partNumMatch) {
-            detectedPartNumber = partNumMatch[0].toUpperCase();
-        }
-
-        // Update state
-        if (detectedPartName) setPartName(detectedPartName);
-        if (detectedPartNumber) setPartNumber(detectedPartNumber);
-
-        // Show feedback
-        if (detectedPartName || detectedPartNumber) {
-            setMessage({
-                type: 'success',
-                text: `✨ Detected: ${detectedPartName || '?'} ${detectedPartNumber ? `(${detectedPartNumber})` : ''}`
-            });
+        // Show what was detected
+        if (detectedParts.length > 0) {
+            const summary = detectedParts.map(p => `${p.name} (${p.number || 'no P/N'})`).join(', ');
+            setMessage({ type: 'success', text: `✨ Detected ${detectedParts.length} part(s): ${summary}` });
+            (window as any).__detectedParts = detectedParts;
         } else {
-            setMessage({
-                type: 'error',
-                text: 'Could not detect part info. Please enter manually.'
-            });
+            setMessage({ type: 'error', text: 'Could not detect any parts. Please check format.' });
         }
     }
 
     async function handleSubmitRequest() {
-        if (!foundDevice || !partName) {
-            setMessage({ type: 'error', text: 'Please select a device and enter part name.' });
+        if (!foundDevice) {
+            setMessage({ type: 'error', text: 'Please select a device first.' });
+            return;
+        }
+
+        const detectedParts = (window as any).__detectedParts || [];
+        if (detectedParts.length === 0) {
+            setMessage({ type: 'error', text: 'Please parse the AI text first.' });
             return;
         }
 
         try {
-            const { error } = await supabase
-                .from('part_requests')
-                .insert([{
-                    inventory_id: foundDevice.id,
-                    part_name: partName,
-                    part_number: partNumber,
-                    ai_description: aiText,
-                    status: 'requested'
-                }]);
+            const requests = detectedParts.map((part: any) => ({
+                inventory_id: foundDevice.id,
+                part_name: part.name,
+                part_number: part.number,
+                ai_description: aiText,
+                status: 'requested'
+            }));
 
+            const { error } = await supabase.from('part_requests').insert(requests);
             if (error) throw error;
 
-            setMessage({ type: 'success', text: '✅ Part request submitted!' });
+            setMessage({ type: 'success', text: `✅ ${detectedParts.length} part request(s) submitted!` });
             setAiText('');
             setPartName('');
             setPartNumber('');
             setFoundDevice(null);
             setSerialSearch('');
+            (window as any).__detectedParts = null;
             fetchData();
         } catch (err) {
             console.error(err);
-            setMessage({ type: 'error', text: 'Failed to submit request.' });
+            setMessage({ type: 'error', text: 'Failed to submit requests.' });
         }
     }
 
