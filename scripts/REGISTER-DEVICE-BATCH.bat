@@ -65,10 +65,10 @@ for /f "tokens=*" %%a in ('powershell -Command "(Get-Content '%RESPFILE%' | Conv
 echo Authentication successful!
 echo.
 echo Detecting hardware specifications...
-echo (Switching to PowerShell scanning engine for better reliability...)
+echo (Using PowerShell for fast scanning...)
 echo.
 
-:: --- FAST HARDWARE DETECTION (Single Pass) ---
+:: --- FAST HARDWARE DETECTION (Single Pass with PowerCfg Battery) ---
 
 set SPECS_SCRIPT=%TEMP%\laptek_specs.ps1
 set SPECS_OUT=%TEMP%\laptek_specs.txt
@@ -104,37 +104,37 @@ echo "GPU_RAM=" + [math]::Round^($gpu.AdapterRAM / 1MB^)
 echo "RESOLUTION=" + $gpu.CurrentHorizontalResolution + "x" + $gpu.CurrentVerticalResolution
 echo "MAC_ADDR=" + $net.MACAddress
 echo.
-echo # RAM Type Logic
+echo # RAM Type
 echo switch^($mem.SMBIOSMemoryType^){20{"RAM_TYPE=DDR"} 21{"RAM_TYPE=DDR2"} 24{"RAM_TYPE=DDR3"} 26{"RAM_TYPE=DDR4"} 30{"RAM_TYPE=LPDDR3"} 34{"RAM_TYPE=DDR5"} 35{"RAM_TYPE=LPDDR5"} default{"RAM_TYPE=Unknown"}}
 echo.
-echo # Battery Logic
-echo if ^(Get-CimInstance Win32_Battery^) { "HAS_BATTERY=true"; "BATTERY_STATUS=Present" } else { "HAS_BATTERY=false"; "BATTERY_STATUS=No Battery" }
-echo.
-echo # Advanced Battery Health ^& Cycles
-echo $static = Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction SilentlyContinue ^| Select-Object -First 1
-echo $full = Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue ^| Select-Object -First 1
-echo $cycle = Get-CimInstance -Namespace root\wmi -ClassName BatteryCycleCount -ErrorAction SilentlyContinue ^| Select-Object -First 1
-echo if ^($static -and $full -and $static.DesignedCapacity -gt 0^) {
-echo     $health = [math]::Round^($full.FullChargedCapacity / $static.DesignedCapacity * 100, 0^)
-echo     "BATTERY_HEALTH=$health%%"
+echo # Battery - PowerCfg Method
+echo if ^(Get-CimInstance Win32_Battery^) {
+echo     "HAS_BATTERY=true"
+echo     "BATTERY_STATUS=Present"
+echo     $rpt = "$env:TEMP\bat_health.xml"
+echo     powercfg /batteryreport /xml /output $rpt 2^\u003e$null ^| Out-Null
+echo     Start-Sleep -Milliseconds 800
+echo     if ^(Test-Path $rpt^) {
+echo         try {
+echo             [xml]$x = Get-Content $rpt -ErrorAction Stop
+echo             $design = [int]$x.BatteryReport.Batteries.Battery.DesignCapacity
+echo             $full = [int]$x.BatteryReport.Batteries.Battery.FullChargeCapacity
+echo             $cycles = $x.BatteryReport.Batteries.Battery.CycleCount
+echo             if ^($design -gt 0 -and $full -gt 0^) {
+echo                 $pct = [math]::Round^(^($full / $design^) * 100^)
+echo                 "BATTERY_HEALTH=$pct%%"
+echo             } else { "BATTERY_HEALTH=Unknown" }
+echo             if ^($cycles^) { "BATTERY_CYCLES=$cycles" } else { "BATTERY_CYCLES=0" }
+echo         } catch { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
+echo     } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
 echo } else {
-echo     # Fallback: Try PowerCfg Report
-echo     $report = "$env:TEMP\battery_report.xml"
-echo     powercfg /batteryreport /xml /output $report 2^>$null
-echo     if ^(Test-Path $report^) {
-echo         [xml]$b = Get-Content $report
-echo         $design = $b.BatteryReport.Batteries.Battery.DesignCapacity
-echo         $fullCharge = $b.BatteryReport.Batteries.Battery.FullChargeCapacity
-echo         if ^($design -gt 0^) {
-echo             $health = [math]::Round^($fullCharge / $design * 100, 0^)
-echo             "BATTERY_HEALTH=$health%%"
-echo             "BATTERY_CYCLES=" + $b.BatteryReport.Batteries.Battery.CycleCount
-echo         } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=Unknown" }
-echo     } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=Unknown" }
+echo     "HAS_BATTERY=false"
+echo     "BATTERY_STATUS=No Battery"
+echo     "BATTERY_HEALTH=N/A"
+echo     "BATTERY_CYCLES=N/A"
 echo }
-echo if ^(! $cycle -and $b^) { "BATTERY_CYCLES=" + $b.BatteryReport.Batteries.Battery.CycleCount } elseif ^($cycle^) { "BATTERY_CYCLES=" + $cycle.CycleCount }
 echo.
-echo # Screen Size Logic
+echo # Screen Size
 echo $mon = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue
 echo if ^($mon^) {
 echo     $diag = [math]::Sqrt^([math]::Pow^($mon.MaxHorizontalImageSize,2^) + [math]::Pow^($mon.MaxVerticalImageSize,2^)^) / 2.54
@@ -196,7 +196,7 @@ echo   Cycles:       %BATTERY_CYCLES%
 echo ========================================
 echo.
 
-:: Build JSON with Fallbacks (Sanitize quotes in variable values if any)
+:: Build JSON
 set REGFILE=%TEMP%\laptek_reg.json
 (
 echo {
