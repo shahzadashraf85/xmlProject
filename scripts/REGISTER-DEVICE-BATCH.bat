@@ -117,8 +117,22 @@ echo $cycle = Get-CimInstance -Namespace root\wmi -ClassName BatteryCycleCount -
 echo if ^($static -and $full -and $static.DesignedCapacity -gt 0^) {
 echo     $health = [math]::Round^($full.FullChargedCapacity / $static.DesignedCapacity * 100, 0^)
 echo     "BATTERY_HEALTH=$health%%"
-echo } else { "BATTERY_HEALTH=Unknown" }
-echo if ^($cycle^) { "BATTERY_CYCLES=" + $cycle.CycleCount } else { "BATTERY_CYCLES=Unknown" }
+echo } else {
+echo     # Fallback: Try PowerCfg Report
+echo     $report = "$env:TEMP\battery_report.xml"
+echo     powercfg /batteryreport /xml /output $report 2^>$null
+echo     if ^(Test-Path $report^) {
+echo         [xml]$b = Get-Content $report
+echo         $design = $b.BatteryReport.Batteries.Battery.DesignCapacity
+echo         $fullCharge = $b.BatteryReport.Batteries.Battery.FullChargeCapacity
+echo         if ^($design -gt 0^) {
+echo             $health = [math]::Round^($fullCharge / $design * 100, 0^)
+echo             "BATTERY_HEALTH=$health%%"
+echo             "BATTERY_CYCLES=" + $b.BatteryReport.Batteries.Battery.CycleCount
+echo         } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=Unknown" }
+echo     } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=Unknown" }
+echo }
+echo if ^(! $cycle -and $b^) { "BATTERY_CYCLES=" + $b.BatteryReport.Batteries.Battery.CycleCount } elseif ^($cycle^) { "BATTERY_CYCLES=" + $cycle.CycleCount }
 echo.
 echo # Screen Size Logic
 echo $mon = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue
