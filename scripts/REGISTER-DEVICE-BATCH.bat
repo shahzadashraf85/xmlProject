@@ -252,18 +252,25 @@ echo Uploading to LapTek Inventory System...
 :: Register device (Using Anon Key - Auth Removed)
 curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
+  -H "Authorization: Bearer sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Content-Type: application/json" ^
   -d @"%REGFILE%" > "%RESPFILE%"
 
 :: Check result
-findstr /C:"error" "%RESPFILE%" >nul
+type "%RESPFILE%" | findstr /I /C:"error" /C:"message" /C:"code" >nul
 if not errorlevel 1 (
+    :: Found error keywords, but check if it's a success message with "message"
+    type "%RESPFILE%" | findstr /C:"success" >nul
+    if not errorlevel 1 (
+        goto :success
+    )
     echo.
     echo ========================================
     echo   REGISTRATION FAILED
     echo ========================================
     type "%RESPFILE%"
 ) else (
+    :success
     echo.
     echo ========================================
     echo   REGISTRATION SUCCESSFUL!
