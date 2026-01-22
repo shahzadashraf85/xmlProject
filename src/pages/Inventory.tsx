@@ -45,6 +45,8 @@ interface InventoryItem {
         wifi_adapter?: string;
         has_battery?: boolean;
         battery_status?: string;
+        battery_health?: string;
+        battery_cycles?: string;
         scanned_at?: string;
         scanned_by?: string;
         computer_name?: string;
