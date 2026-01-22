@@ -96,6 +96,16 @@ echo.
 echo # Battery Logic
 echo if ^(Get-CimInstance Win32_Battery^) { "HAS_BATTERY=true"; "BATTERY_STATUS=Present" } else { "HAS_BATTERY=false"; "BATTERY_STATUS=No Battery" }
 echo.
+echo # Advanced Battery Health ^& Cycles
+echo $static = Get-CimInstance -Namespace root\wmi -ClassName BatteryStaticData -ErrorAction SilentlyContinue ^| Select-Object -First 1
+echo $full = Get-CimInstance -Namespace root\wmi -ClassName BatteryFullChargedCapacity -ErrorAction SilentlyContinue ^| Select-Object -First 1
+echo $cycle = Get-CimInstance -Namespace root\wmi -ClassName BatteryCycleCount -ErrorAction SilentlyContinue ^| Select-Object -First 1
+echo if ^($static -and $full -and $static.DesignedCapacity -gt 0^) {
+echo     $health = [math]::Round^($full.FullChargedCapacity / $static.DesignedCapacity * 100, 0^)
+echo     "BATTERY_HEALTH=$health%%"
+echo } else { "BATTERY_HEALTH=Unknown" }
+echo if ^($cycle^) { "BATTERY_CYCLES=" + $cycle.CycleCount } else { "BATTERY_CYCLES=Unknown" }
+echo.
 echo # Screen Size Logic
 echo $mon = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue
 echo if ^($mon^) {
@@ -150,6 +160,11 @@ echo   VRAM:         %GPU_RAM% MB
 echo   Resolution:   %RESOLUTION%
 echo.
 echo OS:             %OS_NAME%
+echo.
+echo BATTERY:
+echo   Status:       %BATTERY_STATUS%
+echo   Health:       %BATTERY_HEALTH%
+echo   Cycles:       %BATTERY_CYCLES%
 echo ========================================
 echo.
 
@@ -185,6 +200,8 @@ echo     "os_architecture": "%OS_ARCH%",
 echo     "mac_address": "%MAC_ADDR%",
 echo     "has_battery": %HAS_BATTERY%,
 echo     "battery_status": "%BATTERY_STATUS%",
+echo     "battery_health": "%BATTERY_HEALTH%",
+echo     "battery_cycles": "%BATTERY_CYCLES%",
 echo     "scanned_by": "%USER_NAME%",
 echo     "computer_name": "%COMPUTER_NAME%"
 echo   },
@@ -221,7 +238,6 @@ if not errorlevel 1 (
     echo.
     echo Opening web dashboard...
     start "" "https://xmlproject.vercel.app/login?redirect=/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
-)&refresh_token=%REFRESH_TOKEN%"
 )
 
 :: Cleanup
