@@ -30,28 +30,30 @@ echo Authenticating...
 :: Create temp files
 set AUTHFILE=%TEMP%\laptek_auth.json
 set RESPFILE=%TEMP%\laptek_resp.txt
+set SPECS_SCRIPT=%TEMP%\laptek_specs.ps1
+set SPECS_OUT=%TEMP%\laptek_specs.txt
 
 :: Build auth JSON
-echo {"email":"%EMAIL%","password":"%PASSWORD%"} > %AUTHFILE%
+echo {"email":"%EMAIL%","password":"%PASSWORD%"} > "%AUTHFILE%"
 
 :: Authenticate with Supabase
 curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/auth/v1/token?grant_type=password" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Content-Type: application/json" ^
-  -d @%AUTHFILE% > %RESPFILE%
+  -d @"%AUTHFILE%" > "%RESPFILE%"
 
 :: Check if we got an access token
-findstr /C:"access_token" %RESPFILE% >nul
+findstr /C:"access_token" "%RESPFILE%" >nul
 if errorlevel 1 (
     echo.
     echo ========================================
     echo   AUTHENTICATION FAILED
     echo ========================================
     echo Request Payload:
-    type %AUTHFILE%
+    type "%AUTHFILE%"
     echo.
     echo Server Response:
-    type %RESPFILE%
+    type "%RESPFILE%"
     echo.
     echo Check your email and password.
     pause
@@ -68,95 +70,69 @@ echo Detecting hardware specifications...
 echo (Using PowerShell for fast scanning...)
 echo.
 
-:: --- FAST HARDWARE DETECTION (Single Pass with PowerCfg Battery) ---
+:: --- GENERATE POWERSHELL SCRIPT LINE BY LINE ---
+:: Using explicit redirects to avoid syntax errors with parentheses blocks
 
-set SPECS_SCRIPT=%TEMP%\laptek_specs.ps1
-set SPECS_OUT=%TEMP%\laptek_specs.txt
-
-:: Create the PowerShell scanner script
-(
-echo $ErrorActionPreference = 'SilentlyContinue'
-echo $bios = Get-CimInstance Win32_BIOS
-echo $cs = Get-CimInstance Win32_ComputerSystem
-echo $cpu = Get-CimInstance Win32_Processor
-echo $disk = Get-CimInstance Win32_DiskDrive ^| Select-Object -First 1
-echo $os = Get-CimInstance Win32_OperatingSystem
-echo $gpu = Get-CimInstance Win32_VideoController ^| Select-Object -First 1
-echo $net = Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEnabled -eq $true} ^| Select-Object -First 1
-echo $mem = Get-CimInstance Win32_PhysicalMemory ^| Select-Object -First 1
-echo.
-echo "SERIAL=" + $bios.SerialNumber
-echo "BRAND=" + $cs.Manufacturer
-echo "MODEL=" + $cs.Model
-echo "CPU=" + $cpu.Name
-echo "CPU_CORES=" + $cpu.NumberOfCores
-echo "CPU_THREADS=" + $cpu.NumberOfLogicalProcessors
-echo "CPU_SPEED=" + $cpu.MaxClockSpeed
-echo "RAM_GB=" + [math]::Round^($cs.TotalPhysicalMemory / 1GB^)
-echo "DISK_GB=" + [math]::Round^($disk.Size / 1GB^)
-echo "DISK_MODEL=" + $disk.Model
-echo "OS_NAME=" + $os.Caption
-echo "OS_VERSION=" + $os.Version
-echo "OS_BUILD=" + $os.BuildNumber
-echo "OS_ARCH=" + $os.OSArchitecture
-echo "GPU=" + $gpu.Name
-echo "GPU_RAM=" + [math]::Round^($gpu.AdapterRAM / 1MB^)
-echo "RESOLUTION=" + $gpu.CurrentHorizontalResolution + "x" + $gpu.CurrentVerticalResolution
-echo "MAC_ADDR=" + $net.MACAddress
-echo.
-echo # RAM Type
-echo switch^($mem.SMBIOSMemoryType^){20{"RAM_TYPE=DDR"} 21{"RAM_TYPE=DDR2"} 24{"RAM_TYPE=DDR3"} 26{"RAM_TYPE=DDR4"} 30{"RAM_TYPE=LPDDR3"} 34{"RAM_TYPE=DDR5"} 35{"RAM_TYPE=LPDDR5"} default{"RAM_TYPE=Unknown"}}
-echo.
-echo # Battery - BatteryInfoView Method (Most Reliable)
-echo if ^(Get-CimInstance Win32_Battery^) {
-echo     "HAS_BATTERY=true"
-echo     "BATTERY_STATUS=Present"
-echo     # Check local directory first, then TEMP
-echo     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-echo     $bivLocal = Join-Path $scriptDir "BatteryInfoView.exe"
-echo     $bivTemp = "$env:TEMP\BatteryInfoView.exe"
-echo     if ^(Test-Path $bivLocal^) {
-echo         $biv = $bivLocal
-echo     } elseif ^(Test-Path $bivTemp^) {
-echo         $biv = $bivTemp
-echo     } else {
-echo         Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/batterytinfoview-x64.zip" -OutFile "$env:TEMP\biv.zip" -UseBasicParsing
-echo         Expand-Archive "$env:TEMP\biv.zip" -DestinationPath "$env:TEMP" -Force
-echo         $biv = $bivTemp
-echo     }
-echo     $csv = "$env:TEMP\battery.csv"
-echo     if ^(Test-Path $biv^) {
-echo         Start-Process $biv -ArgumentList "/scomma `"$csv`"" -Wait -NoNewWindow
-echo         if ^(Test-Path $csv^) {
-echo             $data = Import-Csv $csv
-echo             $design = [int]$data.'Design Capacity'
-echo             $full = [int]$data.'Full Charged Capacity'
-echo             $cycles = $data.'Cycle Count'
-echo             if ^($design -gt 0 -and $full -gt 0^) {
-echo                 $pct = [math]::Round^(^($full / $design^) * 100^)
-echo                 "BATTERY_HEALTH=$pct%%"
-echo             } else { "BATTERY_HEALTH=Unknown" }
-echo             "BATTERY_CYCLES=$cycles"
-echo         } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
-echo     } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
-echo } else {
-echo     "HAS_BATTERY=false"
-echo     "BATTERY_STATUS=No Battery"
-echo     "BATTERY_HEALTH=N/A"
-echo     "BATTERY_CYCLES=N/A"
-echo }
-echo.
-echo # Screen Size
-echo $mon = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue
-echo if ^($mon^) {
-echo     $diag = [math]::Sqrt^([math]::Pow^($mon.MaxHorizontalImageSize,2^) + [math]::Pow^($mon.MaxVerticalImageSize,2^)^) / 2.54
-echo     "SCREEN_SIZE=" + [math]::Round^($diag, 1^)
-echo } else { "SCREEN_SIZE=Ext Monitor/Unknown" }
-) > "%SPECS_SCRIPT%"
+echo $ErrorActionPreference = 'SilentlyContinue' > "%SPECS_SCRIPT%"
+echo $bios = Get-CimInstance Win32_BIOS >> "%SPECS_SCRIPT%"
+echo $cs = Get-CimInstance Win32_ComputerSystem >> "%SPECS_SCRIPT%"
+echo $cpu = Get-CimInstance Win32_Processor >> "%SPECS_SCRIPT%"
+echo $disk = Get-CimInstance Win32_DiskDrive ^| Select-Object -First 1 >> "%SPECS_SCRIPT%"
+echo $os = Get-CimInstance Win32_OperatingSystem >> "%SPECS_SCRIPT%"
+echo $gpu = Get-CimInstance Win32_VideoController ^| Select-Object -First 1 >> "%SPECS_SCRIPT%"
+echo $net = Get-CimInstance Win32_NetworkAdapterConfiguration ^| Where-Object {$_.IPEnabled -eq $true} ^| Select-Object -First 1 >> "%SPECS_SCRIPT%"
+echo $mem = Get-CimInstance Win32_PhysicalMemory ^| Select-Object -First 1 >> "%SPECS_SCRIPT%"
+echo. >> "%SPECS_SCRIPT%"
+echo "SERIAL=" + $bios.SerialNumber >> "%SPECS_SCRIPT%"
+echo "BRAND=" + $cs.Manufacturer >> "%SPECS_SCRIPT%"
+echo "MODEL=" + $cs.Model >> "%SPECS_SCRIPT%"
+echo "CPU=" + $cpu.Name >> "%SPECS_SCRIPT%"
+echo "CPU_CORES=" + $cpu.NumberOfCores >> "%SPECS_SCRIPT%"
+echo "CPU_THREADS=" + $cpu.NumberOfLogicalProcessors >> "%SPECS_SCRIPT%"
+echo "CPU_SPEED=" + $cpu.MaxClockSpeed >> "%SPECS_SCRIPT%"
+echo "RAM_GB=" + [math]::Round($cs.TotalPhysicalMemory / 1GB) >> "%SPECS_SCRIPT%"
+echo "DISK_GB=" + [math]::Round($disk.Size / 1GB) >> "%SPECS_SCRIPT%"
+echo "DISK_MODEL=" + $disk.Model >> "%SPECS_SCRIPT%"
+echo "OS_NAME=" + $os.Caption >> "%SPECS_SCRIPT%"
+echo "OS_VERSION=" + $os.Version >> "%SPECS_SCRIPT%"
+echo "OS_BUILD=" + $os.BuildNumber >> "%SPECS_SCRIPT%"
+echo "OS_ARCH=" + $os.OSArchitecture >> "%SPECS_SCRIPT%"
+echo "GPU=" + $gpu.Name >> "%SPECS_SCRIPT%"
+echo "GPU_RAM=" + [math]::Round($gpu.AdapterRAM / 1MB) >> "%SPECS_SCRIPT%"
+echo "RESOLUTION=" + $gpu.CurrentHorizontalResolution + "x" + $gpu.CurrentVerticalResolution >> "%SPECS_SCRIPT%"
+echo "MAC_ADDR=" + $net.MACAddress >> "%SPECS_SCRIPT%"
+echo. >> "%SPECS_SCRIPT%"
+echo switch($mem.SMBIOSMemoryType){20{"RAM_TYPE=DDR"} 21{"RAM_TYPE=DDR2"} 24{"RAM_TYPE=DDR3"} 26{"RAM_TYPE=DDR4"} 30{"RAM_TYPE=LPDDR3"} 34{"RAM_TYPE=DDR5"} 35{"RAM_TYPE=LPDDR5"} default{"RAM_TYPE=Unknown"}} >> "%SPECS_SCRIPT%"
+echo. >> "%SPECS_SCRIPT%"
+echo if (Get-CimInstance Win32_Battery) { >> "%SPECS_SCRIPT%"
+echo     "HAS_BATTERY=true" >> "%SPECS_SCRIPT%"
+echo     "BATTERY_STATUS=Present" >> "%SPECS_SCRIPT%"
+echo     $scriptDir = '%~dp0' >> "%SPECS_SCRIPT%"
+echo     $bivLocal = Join-Path $scriptDir "BatteryInfoView.exe" >> "%SPECS_SCRIPT%"
+echo     $bivTemp = "$env:TEMP\BatteryInfoView.exe" >> "%SPECS_SCRIPT%"
+echo     if (Test-Path $bivLocal) { $biv = $bivLocal } elseif (Test-Path $bivTemp) { $biv = $bivTemp } else { >> "%SPECS_SCRIPT%"
+echo         try { Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/batterytinfoview-x64.zip" -OutFile "$env:TEMP\biv.zip" -UseBasicParsing; Expand-Archive "$env:TEMP\biv.zip" -DestinationPath "$env:TEMP" -Force; $biv = $bivTemp } catch { $biv = $null } >> "%SPECS_SCRIPT%"
+echo     } >> "%SPECS_SCRIPT%"
+echo     $csv = "$env:TEMP\battery.csv" >> "%SPECS_SCRIPT%"
+echo     if ($biv -and (Test-Path $biv)) { >> "%SPECS_SCRIPT%"
+echo         Start-Process $biv -ArgumentList "/scomma `"$csv`"" -Wait -NoNewWindow >> "%SPECS_SCRIPT%"
+echo         if (Test-Path $csv) { >> "%SPECS_SCRIPT%"
+echo             $data = Import-Csv $csv >> "%SPECS_SCRIPT%"
+echo             $design = [int]$data.'Design Capacity' >> "%SPECS_SCRIPT%"
+echo             $full = [int]$data.'Full Charged Capacity' >> "%SPECS_SCRIPT%"
+echo             $cycles = $data.'Cycle Count' >> "%SPECS_SCRIPT%"
+echo             if ($design -gt 0 -and $full -gt 0) { $pct = [math]::Round(($full / $design) * 100); "BATTERY_HEALTH=$pct%%" } else { "BATTERY_HEALTH=Unknown" } >> "%SPECS_SCRIPT%"
+echo             "BATTERY_CYCLES=$cycles" >> "%SPECS_SCRIPT%"
+echo         } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" } >> "%SPECS_SCRIPT%"
+echo     } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" } >> "%SPECS_SCRIPT%"
+echo } else { "HAS_BATTERY=false"; "BATTERY_STATUS=No Battery"; "BATTERY_HEALTH=N/A"; "BATTERY_CYCLES=N/A" } >> "%SPECS_SCRIPT%"
+echo. >> "%SPECS_SCRIPT%"
+echo $mon = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams -ErrorAction SilentlyContinue >> "%SPECS_SCRIPT%"
+echo if ($mon) { $diag = [math]::Sqrt([math]::Pow($mon.MaxHorizontalImageSize,2) + [math]::Pow($mon.MaxVerticalImageSize,2)) / 2.54; "SCREEN_SIZE=" + [math]::Round($diag, 1) } else { "SCREEN_SIZE=Ext Monitor/Unknown" } >> "%SPECS_SCRIPT%"
 
 :: Verify script was created
 if not exist "%SPECS_SCRIPT%" (
-    echo ERROR: Could not create PowerShell script
+    echo ERROR: Could not create PowerShell script at %SPECS_SCRIPT%
     pause
     exit /b 1
 )
@@ -166,8 +142,7 @@ powershell -ExecutionPolicy Bypass -File "%SPECS_SCRIPT%" > "%SPECS_OUT%"
 
 :: Verify output was created
 if not exist "%SPECS_OUT%" (
-    echo ERROR: PowerShell script did not produce output
-    echo Script location: %SPECS_SCRIPT%
+    echo ERROR: PowerShell script did not produce output at %SPECS_OUT%
     pause
     exit /b 1
 )
@@ -221,45 +196,43 @@ echo.
 
 :: Build JSON
 set REGFILE=%TEMP%\laptek_reg.json
-(
-echo {
-echo   "brand": "%BRAND%",
-echo   "model": "%MODEL%",
-echo   "serial_number": "%SERIAL%",
-echo   "device_type": "LAPTOP",
-echo   "grade": "B",
-echo   "specs": {
-echo     "manufacturer": "%BRAND%",
-echo     "model_number": "%MODEL%",
-echo     "processor": "%CPU%",
-echo     "processor_cores": %CPU_CORES%,
-echo     "processor_threads": %CPU_THREADS%,
-echo     "processor_speed_mhz": %CPU_SPEED%,
-echo     "ram_gb": %RAM_GB%,
-echo     "ram_type": "%RAM_TYPE%",
-echo     "storage_gb": %DISK_GB%,
-echo     "storage_type": "%DISK_TYPE%",
-echo     "storage_model": "%DISK_MODEL%",
-echo     "graphics_card": "%GPU%",
-echo     "graphics_vram_mb": %GPU_RAM%,
-echo     "screen_resolution": "%RESOLUTION%",
-echo     "screen_size": "%SCREEN_SIZE%",
-echo     "os_name": "%OS_NAME%",
-echo     "os_version": "%OS_VERSION%",
-echo     "os_build": "%OS_BUILD%",
-echo     "os_architecture": "%OS_ARCH%",
-echo     "mac_address": "%MAC_ADDR%",
-echo     "has_battery": %HAS_BATTERY%,
-echo     "battery_status": "%BATTERY_STATUS%",
-echo     "battery_health": "%BATTERY_HEALTH%",
-echo     "battery_cycles": "%BATTERY_CYCLES%",
-echo     "scanned_by": "%USER_NAME%",
-echo     "computer_name": "%COMPUTER_NAME%"
-echo   },
-echo   "status": "pending_triage",
-echo   "location": "Receiving"
-echo }
-) > %REGFILE%
+echo { > "%REGFILE%"
+echo   "brand": "%BRAND%", >> "%REGFILE%"
+echo   "model": "%MODEL%", >> "%REGFILE%"
+echo   "serial_number": "%SERIAL%", >> "%REGFILE%"
+echo   "device_type": "LAPTOP", >> "%REGFILE%"
+echo   "grade": "B", >> "%REGFILE%"
+echo   "specs": { >> "%REGFILE%"
+echo     "manufacturer": "%BRAND%", >> "%REGFILE%"
+echo     "model_number": "%MODEL%", >> "%REGFILE%"
+echo     "processor": "%CPU%", >> "%REGFILE%"
+echo     "processor_cores": %CPU_CORES%, >> "%REGFILE%"
+echo     "processor_threads": %CPU_THREADS%, >> "%REGFILE%"
+echo     "processor_speed_mhz": %CPU_SPEED%, >> "%REGFILE%"
+echo     "ram_gb": %RAM_GB%, >> "%REGFILE%"
+echo     "ram_type": "%RAM_TYPE%", >> "%REGFILE%"
+echo     "storage_gb": %DISK_GB%, >> "%REGFILE%"
+echo     "storage_type": "%DISK_TYPE%", >> "%REGFILE%"
+echo     "storage_model": "%DISK_MODEL%", >> "%REGFILE%"
+echo     "graphics_card": "%GPU%", >> "%REGFILE%"
+echo     "graphics_vram_mb": %GPU_RAM%, >> "%REGFILE%"
+echo     "screen_resolution": "%RESOLUTION%", >> "%REGFILE%"
+echo     "screen_size": "%SCREEN_SIZE%", >> "%REGFILE%"
+echo     "os_name": "%OS_NAME%", >> "%REGFILE%"
+echo     "os_version": "%OS_VERSION%", >> "%REGFILE%"
+echo     "os_build": "%OS_BUILD%", >> "%REGFILE%"
+echo     "os_architecture": "%OS_ARCH%", >> "%REGFILE%"
+echo     "mac_address": "%MAC_ADDR%", >> "%REGFILE%"
+echo     "has_battery": %HAS_BATTERY%, >> "%REGFILE%"
+echo     "battery_status": "%BATTERY_STATUS%", >> "%REGFILE%"
+echo     "battery_health": "%BATTERY_HEALTH%", >> "%REGFILE%"
+echo     "battery_cycles": "%BATTERY_CYCLES%", >> "%REGFILE%"
+echo     "scanned_by": "%USER_NAME%", >> "%REGFILE%"
+echo     "computer_name": "%COMPUTER_NAME%" >> "%REGFILE%"
+echo   }, >> "%REGFILE%"
+echo   "status": "pending_triage", >> "%REGFILE%"
+echo   "location": "Receiving" >> "%REGFILE%"
+echo } >> "%REGFILE%"
 
 echo Uploading to LapTek Inventory System...
 
@@ -268,16 +241,16 @@ curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Authorization: Bearer %ACCESS_TOKEN%" ^
   -H "Content-Type: application/json" ^
-  -d @%REGFILE% > %RESPFILE%
+  -d @"%REGFILE%" > "%RESPFILE%"
 
 :: Check result
-findstr /C:"error" %RESPFILE% >nul
+findstr /C:"error" "%RESPFILE%" >nul
 if not errorlevel 1 (
     echo.
     echo ========================================
     echo   REGISTRATION FAILED
     echo ========================================
-    type %RESPFILE%
+    type "%RESPFILE%"
 ) else (
     echo.
     echo ========================================
@@ -288,13 +261,13 @@ if not errorlevel 1 (
     echo Serial Number: %SERIAL%
     echo.
     echo Opening web dashboard...
-    start "" "https://xmlproject.vercel.app/login?redirect=/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
+    start "" "https://xmlproject.vercel.app/login?redirect=/inventory?search=%SERIAL%^&access_token=%ACCESS_TOKEN%^&refresh_token=%REFRESH_TOKEN%"
 )
 
 :: Cleanup
-del %AUTHFILE% 2>nul
-del %REGFILE% 2>nul
-del %RESPFILE% 2>nul
+del "%AUTHFILE%" 2>nul
+del "%REGFILE%" 2>nul
+del "%RESPFILE%" 2>nul
 del "%SPECS_SCRIPT%" 2>nul
 del "%SPECS_OUT%" 2>nul
 
