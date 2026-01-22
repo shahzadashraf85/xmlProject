@@ -1,8 +1,22 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Check for Administrator privileges
+net session >nul 2>&1
+if %errorLevel% == 0 (
+    goto :gotAdmin
+) else (
+    echo Requesting administrative privileges...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
+:gotAdmin
+cd /d "%~dp0"
+
 echo ========================================
 echo   LapTek Device Auto-Registration
+echo   (Running as Administrator)
 echo ========================================
 echo.
 
