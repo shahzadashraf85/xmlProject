@@ -442,8 +442,18 @@ export default function Inventory() {
                                 {
                                     title: "Display",
                                     icon: "🖥️",
-                                    main: getSpec(selectedItem, 'screen_size'),
-                                    sub: `${getSpec(selectedItem, 'screen_resolution')}`
+                                    custom: (
+                                        <div className="flex flex-col h-full justify-center">
+                                            <span className="font-semibold text-gray-900 text-sm leading-tight">{getSpec(selectedItem, 'screen_size')}</span>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-[11px] text-gray-500">{getSpec(selectedItem, 'screen_resolution')}</span>
+                                                {selectedItem.specs?.is_touch_screen && (
+                                                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] rounded font-bold uppercase tracking-wide">Touch</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ),
+                                    main: "", sub: ""
                                 },
                                 {
                                     title: "OS",
