@@ -482,8 +482,13 @@ export default function Inventory() {
                                 {
                                     title: "Power",
                                     icon: "🔋",
-                                    main: selectedItem.specs?.has_battery ? "Yes" : "No",
-                                    sub: getSpec(selectedItem, 'battery_status')
+                                    main: selectedItem.specs?.has_battery ? "Battery Present" : "No Battery",
+                                    custom: selectedItem.specs?.has_battery ? (
+                                        <div className="space-y-1 mt-1 text-[10px]">
+                                            <div className="flex justify-between"><span className="text-gray-400">Health</span> <span className="font-bold text-green-600">{getSpec(selectedItem, 'battery_health')}</span></div>
+                                            <div className="flex justify-between"><span className="text-gray-400">Cycles</span> <span className="font-mono">{getSpec(selectedItem, 'battery_cycles')}</span></div>
+                                        </div>
+                                    ) : null
                                 }
                             ].map((card, idx) => (
                                 <div key={idx} className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:border-gray-300 transition-colors flex flex-col justify-center min-h-[90px]">
