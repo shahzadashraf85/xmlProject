@@ -107,13 +107,23 @@ export interface PartRequest {
     inventory_id: string;
     part_name: string;
     part_number: string;
-    supplier: string;
+    ai_description?: string;
     status: 'requested' | 'ordered' | 'received';
-    notes?: string;
+    order_id?: string;
     created_at: string;
-    ordered_at?: string;
+    updated_at: string;
+    inventory_item?: InventoryItem;
+}
+
+export interface Order {
+    id: string;
+    supplier: string;
+    status: 'draft' | 'sent' | 'received';
+    created_at: string;
+    sent_at?: string;
     received_at?: string;
-    inventory_item?: InventoryItem; // For joined queries
+    notes?: string;
+    part_requests?: PartRequest[];
 }
 
 export const DEFAULT_SETTINGS: GeneratorSettings = {
