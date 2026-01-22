@@ -769,27 +769,6 @@ export default function Inventory() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Battery</label>
-                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={editForm.specs?.has_battery || false}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, has_battery: e.target.checked } })}
-                                            />
-                                            <span className="text-sm font-medium">Has Battery</span>
-                                        </label>
-                                        <input
-                                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                            placeholder="Battery Status / Health"
-                                            value={editForm.specs?.battery_status || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_status: e.target.value } })}
-                                            disabled={!editForm.specs?.has_battery}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Network Identifiers</label>
                                     <div className="space-y-3">
                                         <div>
@@ -807,6 +786,49 @@ export default function Inventory() {
                                                 value={editForm.specs?.wifi_adapter || ''}
                                                 onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, wifi_adapter: e.target.value } })}
                                             />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mt-4">
+                                    <h3 className="text-xs font-bold text-teal-600 uppercase mb-3">Power & Battery</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Status</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                value={editForm.specs?.battery_status || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_status: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Health</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                placeholder="e.g. 95%"
+                                                value={editForm.specs?.battery_health || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_health: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Cycle Count</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                placeholder="e.g. 45"
+                                                value={editForm.specs?.battery_cycles || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_cycles: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div className="flex items-end">
+                                            <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={editForm.specs?.has_battery || false}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, has_battery: e.target.checked } })}
+                                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                />
+                                                Battery Present
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
