@@ -161,6 +161,45 @@ echo   Cycles:       %BATTERY_CYCLES%
 echo ========================================
 echo.
 
+echo.
+echo ========================================
+echo    MANUAL INPUT
+echo ========================================
+echo.
+
+:ask_grade
+set GRADE=
+set /p GRADE_IN="Enter Grade (A/B/C) [Default: B]: "
+if "%GRADE_IN%"=="" set GRADE_IN=B
+if /I "%GRADE_IN%"=="A" set GRADE=A
+if /I "%GRADE_IN%"=="B" set GRADE=B
+if /I "%GRADE_IN%"=="C" set GRADE=C
+if "%GRADE%"=="" (
+    echo Invalid grade. Please enter A, B, or C.
+    goto ask_grade
+)
+
+:ask_status
+echo Select Status:
+echo   1. Pending Triage (Default)
+echo   2. In Repair
+echo   3. Ready to Ship
+echo   4. Scrapped
+set STATUS_STR=
+set /p STATUS_IN="Enter Status Option (1-4): "
+if "%STATUS_IN%"=="" set STATUS_IN=1
+if "%STATUS_IN%"=="1" set STATUS_STR=pending_triage
+if "%STATUS_IN%"=="2" set STATUS_STR=in_repair
+if "%STATUS_IN%"=="3" set STATUS_STR=ready_to_ship
+if "%STATUS_IN%"=="4" set STATUS_STR=scrapped
+if "%STATUS_STR%"=="" (
+    echo Invalid selection. Please enter 1-4.
+    goto ask_status
+)
+
+set /p LOC="Enter Location [Default: Receiving]: "
+if "%LOC%"=="" set LOC=Receiving
+
 :: Build JSON
 set REGFILE=%TEMP%\laptek_reg.json
 echo { > "%REGFILE%"
@@ -168,7 +207,7 @@ echo   "brand": "%BRAND%", >> "%REGFILE%"
 echo   "model": "%MODEL%", >> "%REGFILE%"
 echo   "serial_number": "%SERIAL%", >> "%REGFILE%"
 echo   "device_type": "LAPTOP", >> "%REGFILE%"
-echo   "grade": "B", >> "%REGFILE%"
+echo   "grade": "%GRADE%", >> "%REGFILE%"
 echo   "specs": { >> "%REGFILE%"
 echo     "manufacturer": "%BRAND%", >> "%REGFILE%"
 echo     "model_number": "%MODEL%", >> "%REGFILE%"
@@ -179,8 +218,8 @@ echo     "processor_speed_mhz": %CPU_SPEED%, >> "%REGFILE%"
 echo     "ram_gb": %RAM_GB%, >> "%REGFILE%"
 echo     "ram_type": "%RAM_TYPE%", >> "%REGFILE%"
 echo     "storage_gb": %DISK_GB%, >> "%REGFILE%"
-echo     "storage_type": "%DISK_TYPE%", >> "%REGFILE%"
 echo     "storage_model": "%DISK_MODEL%", >> "%REGFILE%"
+echo     "storage_type": "%DISK_TYPE%", >> "%REGFILE%"
 echo     "graphics_card": "%GPU%", >> "%REGFILE%"
 echo     "graphics_vram_mb": %GPU_RAM%, >> "%REGFILE%"
 echo     "screen_resolution": "%RESOLUTION%", >> "%REGFILE%"
@@ -198,8 +237,8 @@ echo     "battery_cycles": "%BATTERY_CYCLES%", >> "%REGFILE%"
 echo     "scanned_by": "%USER_NAME%", >> "%REGFILE%"
 echo     "computer_name": "%COMPUTER_NAME%" >> "%REGFILE%"
 echo   }, >> "%REGFILE%"
-echo   "status": "pending_triage", >> "%REGFILE%"
-echo   "location": "Receiving" >> "%REGFILE%"
+echo   "status": "%STATUS_STR%", >> "%REGFILE%"
+echo   "location": "%LOC%" >> "%REGFILE%"
 echo } >> "%REGFILE%"
 
 echo Uploading to LapTek Inventory System...
