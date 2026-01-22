@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { InventoryItem } from '../types';
+import type { InventoryItem } from '../types';
 import * as XLSX from 'xlsx';
 
 export default function InventoryTable() {
@@ -219,8 +219,8 @@ export default function InventoryTable() {
                                     </td>
                                     <td className="p-3 text-center">
                                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold border ${item.grade === 'A' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                item.grade === 'B' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                                    'bg-red-100 text-red-800 border-red-200'
+                                            item.grade === 'B' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                                'bg-red-100 text-red-800 border-red-200'
                                             }`}>
                                             {item.grade}
                                         </span>
