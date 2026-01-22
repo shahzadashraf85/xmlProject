@@ -111,12 +111,20 @@ echo # Battery - BatteryInfoView Method (Most Reliable)
 echo if ^(Get-CimInstance Win32_Battery^) {
 echo     "HAS_BATTERY=true"
 echo     "BATTERY_STATUS=Present"
-echo     $biv = "$env:TEMP\BatteryInfoView.exe"
-echo     $csv = "$env:TEMP\battery.csv"
-echo     if ^(-not ^(Test-Path $biv^)^) {
+echo     # Check local directory first, then TEMP
+echo     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+echo     $bivLocal = Join-Path $scriptDir "BatteryInfoView.exe"
+echo     $bivTemp = "$env:TEMP\BatteryInfoView.exe"
+echo     if ^(Test-Path $bivLocal^) {
+echo         $biv = $bivLocal
+echo     } elseif ^(Test-Path $bivTemp^) {
+echo         $biv = $bivTemp
+echo     } else {
 echo         Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/batterytinfoview-x64.zip" -OutFile "$env:TEMP\biv.zip" -UseBasicParsing
 echo         Expand-Archive "$env:TEMP\biv.zip" -DestinationPath "$env:TEMP" -Force
+echo         $biv = $bivTemp
 echo     }
+echo     $csv = "$env:TEMP\battery.csv"
 echo     if ^(Test-Path $biv^) {
 echo         Start-Process $biv -ArgumentList "/scomma `"$csv`"" -Wait -NoNewWindow
 echo         if ^(Test-Path $csv^) {
