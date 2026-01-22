@@ -75,21 +75,78 @@ export default function PartsManager() {
         }
     }
 
-    // Simple AI parsing (you can enhance this with actual AI later)
+    // Enhanced AI parsing
     function parseAIText() {
+        if (!aiText.trim()) {
+            setMessage({ type: 'error', text: 'Please enter a description first.' });
+            return;
+        }
+
         const text = aiText.toLowerCase();
+        let detectedPartName = '';
+        let detectedPartNumber = '';
 
-        // Extract part name (common patterns)
-        if (text.includes('battery')) setPartName('Battery');
-        else if (text.includes('screen') || text.includes('display')) setPartName('Screen');
-        else if (text.includes('keyboard')) setPartName('Keyboard');
-        else if (text.includes('charger') || text.includes('adapter')) setPartName('Charger');
-        else if (text.includes('ram') || text.includes('memory')) setPartName('RAM');
-        else if (text.includes('ssd') || text.includes('hard drive')) setPartName('Storage');
+        // Part Name Detection (expanded patterns)
+        const partPatterns = [
+            { keywords: ['battery', 'batteries'], name: 'Battery' },
+            { keywords: ['screen', 'display', 'lcd', 'panel'], name: 'Screen' },
+            { keywords: ['keyboard', 'keys'], name: 'Keyboard' },
+            { keywords: ['charger', 'adapter', 'power supply', 'ac adapter'], name: 'Charger' },
+            { keywords: ['ram', 'memory', 'dimm'], name: 'RAM' },
+            { keywords: ['ssd', 'hard drive', 'hdd', 'storage', 'disk'], name: 'Storage Drive' },
+            { keywords: ['motherboard', 'mainboard', 'logic board'], name: 'Motherboard' },
+            { keywords: ['fan', 'cooling'], name: 'Cooling Fan' },
+            { keywords: ['hinge', 'hinges'], name: 'Hinge' },
+            { keywords: ['touchpad', 'trackpad'], name: 'Touchpad' },
+            { keywords: ['webcam', 'camera'], name: 'Webcam' },
+            { keywords: ['wifi', 'wireless card', 'network card'], name: 'WiFi Card' },
+            { keywords: ['speaker', 'speakers'], name: 'Speaker' },
+            { keywords: ['cable', 'flex cable'], name: 'Cable' },
+            { keywords: ['bezel', 'cover'], name: 'Cover/Bezel' }
+        ];
 
-        // Extract part number if present (pattern: alphanumeric with dashes/underscores)
-        const partNumMatch = text.match(/[A-Z0-9]{3,}[-_]?[A-Z0-9]*/i);
-        if (partNumMatch) setPartNumber(partNumMatch[0].toUpperCase());
+        for (const pattern of partPatterns) {
+            if (pattern.keywords.some(keyword => text.includes(keyword))) {
+                detectedPartName = pattern.name;
+                break;
+            }
+        }
+
+        // Part Number Detection (multiple patterns)
+        // Pattern 1: Standard alphanumeric with dashes (e.g., L15L4PC0, PA-1650-78)
+        let partNumMatch = text.match(/\b[A-Z0-9]{2,}[-_][A-Z0-9]{2,}[-_]?[A-Z0-9]*\b/i);
+
+        // Pattern 2: Simple alphanumeric codes (e.g., L15L4PC0)
+        if (!partNumMatch) {
+            partNumMatch = text.match(/\b[A-Z]{1,3}[0-9]{2,}[A-Z0-9]{2,}\b/i);
+        }
+
+        // Pattern 3: Part number after keywords
+        if (!partNumMatch) {
+            const afterPartNum = text.match(/(?:part\s*(?:number|#|num)?|p\/n|pn|model)\s*:?\s*([A-Z0-9-_]{4,})/i);
+            if (afterPartNum) partNumMatch = [afterPartNum[1]];
+        }
+
+        if (partNumMatch) {
+            detectedPartNumber = partNumMatch[0].toUpperCase();
+        }
+
+        // Update state
+        if (detectedPartName) setPartName(detectedPartName);
+        if (detectedPartNumber) setPartNumber(detectedPartNumber);
+
+        // Show feedback
+        if (detectedPartName || detectedPartNumber) {
+            setMessage({
+                type: 'success',
+                text: `✨ Detected: ${detectedPartName || '?'} ${detectedPartNumber ? `(${detectedPartNumber})` : ''}`
+            });
+        } else {
+            setMessage({
+                type: 'error',
+                text: 'Could not detect part info. Please enter manually.'
+            });
+        }
     }
 
     async function handleSubmitRequest() {
@@ -207,8 +264,8 @@ export default function PartsManager() {
                     <button
                         onClick={() => setActiveTab('request')}
                         className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'request'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
                             }`}
                     >
                         Request Parts
@@ -216,8 +273,8 @@ export default function PartsManager() {
                     <button
                         onClick={() => setActiveTab('orders')}
                         className={`px-4 py-2 rounded-md font-medium transition-colors ${activeTab === 'orders'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
                             }`}
                     >
                         Manage Orders
