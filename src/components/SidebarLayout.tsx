@@ -21,6 +21,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         { name: 'History', path: '/history', icon: '📜' },
         { name: 'Inventory Manager', path: '/inventory', icon: '💻' },
         { name: 'Master Inventory', path: '/inventory-grid', icon: '📊' },
+        { name: 'Parts Management', path: '/parts', icon: '🛠️' },
         { name: 'Messages', path: '/messages', icon: '📧' },
     ];
 

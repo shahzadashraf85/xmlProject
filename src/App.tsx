@@ -8,6 +8,7 @@ import History from './pages/History';
 import Inventory from './pages/Inventory';
 import Messages from './pages/Messages';
 import InventoryTable from './pages/InventoryTable';
+import PartsManager from './pages/PartsManager';
 
 
 function App() {
@@ -75,6 +76,17 @@ function App() {
           />
 
 
+
+          <Route
+            path="/parts"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <PartsManager />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>

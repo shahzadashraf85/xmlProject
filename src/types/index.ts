@@ -102,6 +102,20 @@ export interface RepairSession {
     work_notes?: string;
 }
 
+export interface PartRequest {
+    id: string;
+    inventory_id: string;
+    part_name: string;
+    part_number: string;
+    supplier: string;
+    status: 'requested' | 'ordered' | 'received';
+    notes?: string;
+    created_at: string;
+    ordered_at?: string;
+    received_at?: string;
+    inventory_item?: InventoryItem; // For joined queries
+}
+
 export const DEFAULT_SETTINGS: GeneratorSettings = {
     signatureThreshold: 100,
 };
