@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import * as XLSX from 'xlsx';
 
 interface InventoryItem {
     id: string;
@@ -227,6 +228,30 @@ export default function Inventory() {
         return '-';
     };
 
+    // Export Handler
+    const handleExport = (data: InventoryItem[]) => {
+        const exportData = data.map(item => ({
+            "Serial Number": item.serial_number,
+            "Brand": item.brand,
+            "Model": item.model,
+            "Grade": item.grade,
+            "Status": item.status,
+            "Location": item.location,
+            "Processor": item.specs?.processor || '-',
+            "RAM (GB)": item.specs?.ram_gb || 0,
+            "Storage (GB)": item.specs?.storage_gb || 0,
+            "OS": item.specs?.os_name || '-',
+            "Battery Health": item.specs?.battery_health || '-',
+            "Battery Cycles": item.specs?.battery_cycles || '-',
+            "Created At": new Date(item.created_at).toLocaleDateString()
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+        XLSX.writeFile(wb, `Inventory_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
     return (
         <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
             {/* LEFT SIDEBAR: Device List */}
@@ -272,8 +297,16 @@ export default function Inventory() {
                             <option value="A">Grade A</option>
                             <option value="B">Grade B</option>
                             <option value="C">Grade C</option>
+                            <option value="C">C Grade</option>
                         </select>
                     </div>
+                    {/* Export Button */}
+                    <button
+                        onClick={() => handleExport(filteredItems)}
+                        className="w-full flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                    >
+                        <span>📊</span> Export Filtered ({filteredItems.length})
+                    </button>
                 </div>
 
                 {/* Device List Items */}
