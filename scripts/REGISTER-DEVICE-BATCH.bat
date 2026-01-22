@@ -154,8 +154,23 @@ echo     "SCREEN_SIZE=" + [math]::Round^($diag, 1^)
 echo } else { "SCREEN_SIZE=Ext Monitor/Unknown" }
 ) > "%SPECS_SCRIPT%"
 
+:: Verify script was created
+if not exist "%SPECS_SCRIPT%" (
+    echo ERROR: Could not create PowerShell script
+    pause
+    exit /b 1
+)
+
 :: Run the scanner once
 powershell -ExecutionPolicy Bypass -File "%SPECS_SCRIPT%" > "%SPECS_OUT%"
+
+:: Verify output was created
+if not exist "%SPECS_OUT%" (
+    echo ERROR: PowerShell script did not produce output
+    echo Script location: %SPECS_SCRIPT%
+    pause
+    exit /b 1
+)
 
 :: Read the output variables
 for /f "tokens=1,2 delims==" %%A in (%SPECS_OUT%) do (
@@ -165,10 +180,6 @@ for /f "tokens=1,2 delims==" %%A in (%SPECS_OUT%) do (
 :: Disk Type Logic (Batch side)
 echo %DISK_MODEL% | findstr /I "SSD NVMe Solid" >nul
 if not errorlevel 1 (set DISK_TYPE=SSD) else (set DISK_TYPE=HDD)
-
-:: Clean up temp files
-del "%SPECS_SCRIPT%"
-del "%SPECS_OUT%"
 
 set USER_NAME=%USERNAME%
 set COMPUTER_NAME=%COMPUTERNAME%
@@ -284,6 +295,8 @@ if not errorlevel 1 (
 del %AUTHFILE% 2>nul
 del %REGFILE% 2>nul
 del %RESPFILE% 2>nul
+del "%SPECS_SCRIPT%" 2>nul
+del "%SPECS_OUT%" 2>nul
 
 echo.
 pause
