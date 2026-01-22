@@ -179,6 +179,11 @@ if "%GRADE%"=="" (
     goto ask_grade
 )
 
+set COMMENT=
+if /I not "%GRADE%"=="A" (
+    set /p COMMENT="Enter Reason/Comment (e.g. Scratched lid): "
+)
+
 :ask_status
 echo Select Status:
 echo   1. Pending Triage (Default)
@@ -238,7 +243,8 @@ echo     "scanned_by": "%USER_NAME%", >> "%REGFILE%"
 echo     "computer_name": "%COMPUTER_NAME%" >> "%REGFILE%"
 echo   }, >> "%REGFILE%"
 echo   "status": "%STATUS_STR%", >> "%REGFILE%"
-echo   "location": "%LOC%" >> "%REGFILE%"
+echo   "location": "%LOC%", >> "%REGFILE%"
+echo   "comments": "%COMMENT%" >> "%REGFILE%"
 echo } >> "%REGFILE%"
 
 echo Uploading to LapTek Inventory System...

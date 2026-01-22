@@ -49,6 +49,7 @@ export interface InventoryItem {
     grade: string;
     status: string;
     location: string;
+    comments?: string;
     created_at: string;
     specs: {
         manufacturer?: string;

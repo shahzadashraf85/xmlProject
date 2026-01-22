@@ -403,6 +403,19 @@ export default function Inventory() {
                                         className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 p-0 w-full placeholder-gray-300"
                                     />
                                 </div>
+
+                                <div className="h-4 w-px bg-gray-200"></div>
+
+                                <div className="flex items-center gap-2 flex-[2]">
+                                    <span className="text-[10px] uppercase font-bold text-gray-400">Notes</span>
+                                    <input
+                                        type="text"
+                                        defaultValue={selectedItem.comments || ''}
+                                        onBlur={e => updateField(selectedItem.id, { comments: e.target.value })}
+                                        placeholder="Add comment..."
+                                        className="text-xs border-none bg-transparent font-medium text-gray-500 focus:ring-0 p-0 w-full placeholder-gray-300 italic"
+                                    />
+                                </div>
                             </div>
                         </div>
 
