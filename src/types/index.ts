@@ -40,38 +40,56 @@ export interface GeneratorSettings {
     signatureThreshold: number;
 }
 
-export interface DeviceSpecs {
-    processor: string;
-    ram: string;
-    storage: string;
-    graphics: string;
-    os: string;
-    condition: string;
-
-    // Laptop Specific
-    display?: string;
-    ports?: string;
-    connectivity?: string;
-    keyboard?: string;
-    battery?: string;
-
-    // Desktop Specific
-    form_factor?: string;
-    network?: string;
-    warranty?: string;
-}
-
 export interface InventoryItem {
     id: string;
-    serial_number: string;
     brand: string;
     model: string;
-    device_type: 'laptop' | 'desktop';
-    specs: DeviceSpecs;
-    grade: 'A' | 'B' | 'C';
-    repair_needed_description?: string;
-    status: 'pending_triage' | 'in_repair' | 'ready_to_ship' | 'scrapped';
+    serial_number: string;
+    device_type: string;
+    grade: string;
+    status: string;
+    location: string;
     created_at: string;
+    specs: {
+        manufacturer?: string;
+        model_number?: string;
+        part_number?: string;
+        motherboard?: string;
+        bios_version?: string;
+        processor?: string;
+        processor_cores?: number;
+        processor_threads?: number;
+        processor_speed_mhz?: number;
+        processor_architecture?: string;
+        ram_gb?: number;
+        ram_type?: string;
+        ram_speed_mhz?: number;
+        ram_slots?: number;
+        storage_gb?: number;
+        storage_type?: string;
+        storage_model?: string;
+        all_storage?: Array<{ model: string; size_gb: number; type: string; interface: string }>;
+        graphics_card?: string;
+        graphics_vram_mb?: number;
+        graphics_driver?: string;
+        all_gpus?: Array<{ name: string; ram_mb: number; driver: string }>;
+        screen_resolution?: string;
+        screen_size?: string;
+        monitor_count?: number;
+        os_name?: string;
+        os_version?: string;
+        os_build?: string;
+        os_architecture?: string;
+        mac_address?: string;
+        wifi_adapter?: string;
+        has_battery?: boolean;
+        battery_status?: string;
+        battery_health?: string;
+        battery_cycles?: string;
+        scanned_at?: string;
+        scanned_by?: string;
+        computer_name?: string;
+    };
 }
 
 export interface RepairSession {

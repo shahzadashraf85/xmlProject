@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import History from './pages/History';
 import Inventory from './pages/Inventory';
 import Messages from './pages/Messages';
+import InventoryTable from './pages/InventoryTable';
 
 
 function App() {
@@ -57,6 +58,17 @@ function App() {
               <ProtectedRoute>
                 <SidebarLayout>
                   <Messages />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/inventory-grid"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <InventoryTable />
                 </SidebarLayout>
               </ProtectedRoute>
             }

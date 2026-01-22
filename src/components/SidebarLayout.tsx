@@ -20,6 +20,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         { name: 'Shipping Dashboard', path: '/dashboard', icon: '🚚' },
         { name: 'History', path: '/history', icon: '📜' },
         { name: 'Inventory Manager', path: '/inventory', icon: '💻' },
+        { name: 'Master Inventory', path: '/inventory-grid', icon: '📊' },
         { name: 'Messages', path: '/messages', icon: '📧' },
     ];
 
