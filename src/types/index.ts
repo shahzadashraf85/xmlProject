@@ -75,6 +75,7 @@ export interface InventoryItem {
         all_gpus?: Array<{ name: string; ram_mb: number; driver: string }>;
         screen_resolution?: string;
         screen_size?: string;
+        is_touch_screen?: boolean;
         monitor_count?: number;
         os_name?: string;
         os_version?: string;

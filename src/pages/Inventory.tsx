@@ -2,57 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
-interface InventoryItem {
-    id: string;
-    brand: string;
-    model: string;
-    serial_number: string;
-    device_type: string;
-    grade: string;
-    status: string;
-    location: string;
-    created_at: string;
-    specs: {
-        manufacturer?: string;
-        model_number?: string;
-        part_number?: string;
-        motherboard?: string;
-        bios_version?: string;
-        processor?: string;
-        processor_cores?: number;
-        processor_threads?: number;
-        processor_speed_mhz?: number;
-        processor_architecture?: string;
-        ram_gb?: number;
-        ram_type?: string;
-        ram_speed_mhz?: number;
-        ram_slots?: number;
-        storage_gb?: number;
-        storage_type?: string;
-        storage_model?: string;
-        all_storage?: Array<{ model: string; size_gb: number; type: string; interface: string }>;
-        graphics_card?: string;
-        graphics_vram_mb?: number;
-        graphics_driver?: string;
-        all_gpus?: Array<{ name: string; ram_mb: number; driver: string }>;
-        screen_resolution?: string;
-        screen_size?: string;
-        monitor_count?: number;
-        os_name?: string;
-        os_version?: string;
-        os_build?: string;
-        os_architecture?: string;
-        mac_address?: string;
-        wifi_adapter?: string;
-        has_battery?: boolean;
-        battery_status?: string;
-        battery_health?: string;
-        battery_cycles?: string;
-        scanned_at?: string;
-        scanned_by?: string;
-        computer_name?: string;
-    };
-}
+import type { InventoryItem } from '../types';
 
 export default function Inventory() {
     const [items, setItems] = useState<InventoryItem[]>([]);
@@ -803,6 +753,18 @@ export default function Inventory() {
                                             value={editForm.specs?.screen_resolution || ''}
                                             onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_resolution: e.target.value } })}
                                         />
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="is_touch_screen"
+                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            checked={editForm.specs?.is_touch_screen || false}
+                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, is_touch_screen: e.target.checked } })}
+                                        />
+                                        <label htmlFor="is_touch_screen" className="text-sm text-gray-700 font-medium select-none cursor-pointer">
+                                            Touch Screen
+                                        </label>
                                     </div>
                                 </div>
 

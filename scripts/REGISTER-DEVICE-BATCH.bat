@@ -20,55 +20,14 @@ echo   (Running as Administrator)
 echo ========================================
 echo.
 
-:: Get credentials
-set /p EMAIL="Email: "
-set /p PASSWORD="Password: "
-
-echo.
-echo Authenticating...
-
-:: Create temp files
-set AUTHFILE=%TEMP%\laptek_auth.json
-set RESPFILE=%TEMP%\laptek_resp.txt
-set SPECS_SCRIPT=%TEMP%\laptek_specs.ps1
-set SPECS_OUT=%TEMP%\laptek_specs.txt
-
-:: Build auth JSON
-echo {"email":"%EMAIL%","password":"%PASSWORD%"} > "%AUTHFILE%"
-
-:: Authenticate with Supabase
-curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/auth/v1/token?grant_type=password" ^
-  -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
-  -H "Content-Type: application/json" ^
-  -d @"%AUTHFILE%" > "%RESPFILE%"
-
-:: Check if we got an access token
-findstr /C:"access_token" "%RESPFILE%" >nul
-if errorlevel 1 (
-    echo.
-    echo ========================================
-    echo   AUTHENTICATION FAILED
-    echo ========================================
-    echo Request Payload:
-    type "%AUTHFILE%"
-    echo.
-    echo Server Response:
-    type "%RESPFILE%"
-    echo.
-    echo Check your email and password.
-    pause
-    exit /b 1
-)
-
-:: Extract access & refresh tokens using inline PowerShell (Trimmed & Encoded for URL)
-for /f "tokens=*" %%a in ('powershell -Command "$t = (Get-Content '%RESPFILE%' | ConvertFrom-Json).access_token; [uri]::EscapeDataString($t)"') do set ACCESS_TOKEN=%%a
-for /f "tokens=*" %%a in ('powershell -Command "$t = (Get-Content '%RESPFILE%' | ConvertFrom-Json).refresh_token; [uri]::EscapeDataString($t)"') do set REFRESH_TOKEN=%%a
-
-echo Authentication successful!
-echo.
 echo Detecting hardware specifications...
 echo (Using PowerShell for fast scanning...)
 echo.
+
+:: Create temp files
+set RESPFILE=%TEMP%\laptek_resp.txt
+set SPECS_SCRIPT=%TEMP%\laptek_specs.ps1
+set SPECS_OUT=%TEMP%\laptek_specs.txt
 
 :: --- GENERATE POWERSHELL SCRIPT LINE BY LINE ---
 :: Using explicit redirects to avoid syntax errors with parentheses blocks
@@ -101,6 +60,10 @@ echo "GPU=" + $gpu.Name >> "%SPECS_SCRIPT%"
 echo "GPU_RAM=" + [math]::Round($gpu.AdapterRAM / 1MB) >> "%SPECS_SCRIPT%"
 echo "RESOLUTION=" + $gpu.CurrentHorizontalResolution + "x" + $gpu.CurrentVerticalResolution >> "%SPECS_SCRIPT%"
 echo "MAC_ADDR=" + $net.MACAddress >> "%SPECS_SCRIPT%"
+echo. >> "%SPECS_SCRIPT%"
+echo # Touch Screen Detection >> "%SPECS_SCRIPT%"
+echo $touch = Get-CimInstance Win32_PnPEntity ^| Where-Object { $_.Name -match 'Touch' -or $_.Name -match 'Touch Screen' } >> "%SPECS_SCRIPT%"
+echo if ($touch) { "IS_TOUCH=true" } else { "IS_TOUCH=false" } >> "%SPECS_SCRIPT%"
 echo. >> "%SPECS_SCRIPT%"
 echo switch($mem.SMBIOSMemoryType){20{"RAM_TYPE=DDR"} 21{"RAM_TYPE=DDR2"} 24{"RAM_TYPE=DDR3"} 26{"RAM_TYPE=DDR4"} 30{"RAM_TYPE=LPDDR3"} 34{"RAM_TYPE=DDR5"} 35{"RAM_TYPE=LPDDR5"} default{"RAM_TYPE=Unknown"}} >> "%SPECS_SCRIPT%"
 echo. >> "%SPECS_SCRIPT%"
@@ -185,6 +148,10 @@ echo   GPU:          %GPU%
 echo   VRAM:         %GPU_RAM% MB
 echo   Resolution:   %RESOLUTION%
 echo.
+echo DISPLAY:
+echo   Size:         %SCREEN_SIZE%
+if "%IS_TOUCH%"=="true" (echo   Touch:        YES) else (echo   Touch:        NO)
+echo.
 echo OS:             %OS_NAME%
 echo.
 echo BATTERY:
@@ -218,6 +185,7 @@ echo     "graphics_card": "%GPU%", >> "%REGFILE%"
 echo     "graphics_vram_mb": %GPU_RAM%, >> "%REGFILE%"
 echo     "screen_resolution": "%RESOLUTION%", >> "%REGFILE%"
 echo     "screen_size": "%SCREEN_SIZE%", >> "%REGFILE%"
+echo     "is_touch_screen": %IS_TOUCH%, >> "%REGFILE%"
 echo     "os_name": "%OS_NAME%", >> "%REGFILE%"
 echo     "os_version": "%OS_VERSION%", >> "%REGFILE%"
 echo     "os_build": "%OS_BUILD%", >> "%REGFILE%"
@@ -236,10 +204,9 @@ echo } >> "%REGFILE%"
 
 echo Uploading to LapTek Inventory System...
 
-:: Register device
+:: Register device (Using Anon Key - Auth Removed)
 curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
-  -H "Authorization: Bearer %ACCESS_TOKEN%" ^
   -H "Content-Type: application/json" ^
   -d @"%REGFILE%" > "%RESPFILE%"
 
@@ -261,7 +228,7 @@ if not errorlevel 1 (
     echo Serial Number: %SERIAL%
     echo.
     echo Opening web dashboard...
-    start "" "https://xmlproject.vercel.app/login?redirect=/inventory?search=%SERIAL%&access_token=%ACCESS_TOKEN%&refresh_token=%REFRESH_TOKEN%"
+    start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%"
 )
 
 :: Cleanup
