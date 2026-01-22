@@ -167,9 +167,9 @@ export default function PartsManager() {
             setSerialSearch('');
             setDetectedParts([]);
             fetchData();
-        } catch (err) {
-            console.error(err);
-            setMessage({ type: 'error', text: 'Failed to submit requests.' });
+        } catch (err: any) {
+            console.error('Submission Error:', err);
+            setMessage({ type: 'error', text: `Failed to submit: ${err.message || 'Unknown error'}` });
         }
     }
 
@@ -329,25 +329,42 @@ export default function PartsManager() {
                             </button>
                         </div>
 
-                        {/* Detected Parts List */}
+                        {/* Detected Parts List (Editable) */}
                         {detectedParts.length > 0 && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <div className="font-bold text-blue-900 mb-2">📋 Parts to Submit ({detectedParts.length})</div>
                                 <div className="space-y-2">
                                     {detectedParts.map((part, idx) => (
-                                        <div key={idx} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-2xl">✓</span>
-                                                <div>
-                                                    <div className="font-bold text-gray-900">{part.name}</div>
-                                                    <div className="text-xs text-gray-500">P/N: {part.number || 'Not specified'}</div>
-                                                </div>
-                                            </div>
+                                        <div key={idx} className="flex flex-col sm:flex-row gap-2 bg-white p-2 rounded border border-blue-100 items-start sm:items-center">
+                                            <span className="text-green-500 font-bold hidden sm:block">✓</span>
+
+                                            <input
+                                                className="flex-1 px-2 py-1 text-sm border rounded hover:border-blue-400 focus:border-blue-500 outline-none font-medium"
+                                                value={part.name}
+                                                onChange={(e) => {
+                                                    const newParts = [...detectedParts];
+                                                    newParts[idx].name = e.target.value;
+                                                    setDetectedParts(newParts);
+                                                }}
+                                                placeholder="Part Name"
+                                            />
+
+                                            <input
+                                                className="flex-1 px-2 py-1 text-sm border rounded hover:border-blue-400 focus:border-blue-500 outline-none font-mono text-gray-600"
+                                                value={part.number}
+                                                onChange={(e) => {
+                                                    const newParts = [...detectedParts];
+                                                    newParts[idx].number = e.target.value;
+                                                    setDetectedParts(newParts);
+                                                }}
+                                                placeholder="Part Number"
+                                            />
+
                                             <button
                                                 onClick={() => setDetectedParts(detectedParts.filter((_, i) => i !== idx))}
-                                                className="text-red-500 hover:text-red-700 text-xs px-2 py-1"
+                                                className="text-red-500 hover:text-red-700 text-xs px-2 py-1 font-medium hover:bg-red-50 rounded"
                                             >
-                                                Remove
+                                                ✕
                                             </button>
                                         </div>
                                     ))}
