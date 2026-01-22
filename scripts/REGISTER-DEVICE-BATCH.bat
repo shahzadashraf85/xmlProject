@@ -249,10 +249,9 @@ echo } >> "%REGFILE%"
 
 echo Uploading to LapTek Inventory System...
 
-:: Register device (Using Anon Key - Auth Removed)
+:: Register device (Using Anon Key)
 curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
-  -H "Authorization: Bearer sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Content-Type: application/json" ^
   -d @"%REGFILE%" > "%RESPFILE%"
 
