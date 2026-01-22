@@ -11,10 +11,9 @@ export default function PartsManager() {
     const [serialSearch, setSerialSearch] = useState('');
     const [foundDevice, setFoundDevice] = useState<InventoryItem | null>(null);
     const [aiText, setAiText] = useState('');
-    const [partName, setPartName] = useState('');
-    const [partNumber, setPartNumber] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [detectedParts, setDetectedParts] = useState<Array<{ name: string, number: string }>>([]);
 
     // ORDERS TAB STATE
     const [requests, setRequests] = useState<PartRequest[]>([]);
@@ -130,12 +129,12 @@ export default function PartsManager() {
             }
         }
 
-        // Show what was detected
+        // Show what was detected and update state
         if (detectedParts.length > 0) {
-            const summary = detectedParts.map(p => `${p.name} (${p.number || 'no P/N'})`).join(', ');
-            setMessage({ type: 'success', text: `✨ Detected ${detectedParts.length} part(s): ${summary}` });
-            (window as any).__detectedParts = detectedParts;
+            setDetectedParts(detectedParts);
+            setMessage({ type: 'success', text: `✨ Detected ${detectedParts.length} part(s)` });
         } else {
+            setDetectedParts([]);
             setMessage({ type: 'error', text: 'Could not detect any parts. Please check format.' });
         }
     }
@@ -145,8 +144,6 @@ export default function PartsManager() {
             setMessage({ type: 'error', text: 'Please select a device first.' });
             return;
         }
-
-        const detectedParts = (window as any).__detectedParts || [];
         if (detectedParts.length === 0) {
             setMessage({ type: 'error', text: 'Please parse the AI text first.' });
             return;
@@ -166,11 +163,9 @@ export default function PartsManager() {
 
             setMessage({ type: 'success', text: `✅ ${detectedParts.length} part request(s) submitted!` });
             setAiText('');
-            setPartName('');
-            setPartNumber('');
             setFoundDevice(null);
             setSerialSearch('');
-            (window as any).__detectedParts = null;
+            setDetectedParts([]);
             fetchData();
         } catch (err) {
             console.error(err);
@@ -334,35 +329,39 @@ export default function PartsManager() {
                             </button>
                         </div>
 
-                        {/* Step 3: Part Details (Auto-filled by AI) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-600 mb-2">Part Name</label>
-                                <input
-                                    placeholder="e.g. Battery, Screen, Keyboard"
-                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={partName}
-                                    onChange={e => setPartName(e.target.value)}
-                                />
+                        {/* Detected Parts List */}
+                        {detectedParts.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="font-bold text-blue-900 mb-2">📋 Parts to Submit ({detectedParts.length})</div>
+                                <div className="space-y-2">
+                                    {detectedParts.map((part, idx) => (
+                                        <div key={idx} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-2xl">✓</span>
+                                                <div>
+                                                    <div className="font-bold text-gray-900">{part.name}</div>
+                                                    <div className="text-xs text-gray-500">P/N: {part.number || 'Not specified'}</div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setDetectedParts(detectedParts.filter((_, i) => i !== idx))}
+                                                className="text-red-500 hover:text-red-700 text-xs px-2 py-1"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-600 mb-2">Part Number (Optional)</label>
-                                <input
-                                    placeholder="e.g. L15L4PC0"
-                                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={partNumber}
-                                    onChange={e => setPartNumber(e.target.value)}
-                                />
-                            </div>
-                        </div>
+                        )}
 
                         {/* Submit */}
                         <button
                             onClick={handleSubmitRequest}
-                            disabled={!foundDevice || !partName}
+                            disabled={!foundDevice || detectedParts.length === 0}
                             className="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm"
                         >
-                            Submit Part Request
+                            Submit {detectedParts.length > 0 ? `${detectedParts.length} Part Request(s)` : 'Part Request'}
                         </button>
 
                         {message && (
