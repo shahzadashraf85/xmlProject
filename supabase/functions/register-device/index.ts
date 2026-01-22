@@ -63,6 +63,7 @@ serve(async (req) => {
                 grade: deviceData.grade || 'B',
                 status: deviceData.status || 'pending_triage',
                 location: deviceData.location || 'Receiving',
+                comments: deviceData.comments,
 
                 // System Info
                 manufacturer: specs.manufacturer || deviceData.brand,
