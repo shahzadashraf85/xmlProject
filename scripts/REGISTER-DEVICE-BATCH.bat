@@ -107,25 +107,29 @@ echo.
 echo # RAM Type
 echo switch^($mem.SMBIOSMemoryType^){20{"RAM_TYPE=DDR"} 21{"RAM_TYPE=DDR2"} 24{"RAM_TYPE=DDR3"} 26{"RAM_TYPE=DDR4"} 30{"RAM_TYPE=LPDDR3"} 34{"RAM_TYPE=DDR5"} 35{"RAM_TYPE=LPDDR5"} default{"RAM_TYPE=Unknown"}}
 echo.
-echo # Battery - PowerCfg Method
+echo # Battery - BatteryInfoView Method (Most Reliable)
 echo if ^(Get-CimInstance Win32_Battery^) {
 echo     "HAS_BATTERY=true"
 echo     "BATTERY_STATUS=Present"
-echo     $rpt = "$env:TEMP\bat_health.xml"
-echo     powercfg /batteryreport /xml /output $rpt 2^\u003e$null ^| Out-Null
-echo     Start-Sleep -Milliseconds 800
-echo     if ^(Test-Path $rpt^) {
-echo         try {
-echo             [xml]$x = Get-Content $rpt -ErrorAction Stop
-echo             $design = [int]$x.BatteryReport.Batteries.Battery.DesignCapacity
-echo             $full = [int]$x.BatteryReport.Batteries.Battery.FullChargeCapacity
-echo             $cycles = $x.BatteryReport.Batteries.Battery.CycleCount
+echo     $biv = "$env:TEMP\BatteryInfoView.exe"
+echo     $csv = "$env:TEMP\battery.csv"
+echo     if ^(-not ^(Test-Path $biv^)^) {
+echo         Invoke-WebRequest -Uri "https://www.nirsoft.net/utils/batterytinfoview-x64.zip" -OutFile "$env:TEMP\biv.zip" -UseBasicParsing
+echo         Expand-Archive "$env:TEMP\biv.zip" -DestinationPath "$env:TEMP" -Force
+echo     }
+echo     if ^(Test-Path $biv^) {
+echo         Start-Process $biv -ArgumentList "/scomma `"$csv`"" -Wait -NoNewWindow
+echo         if ^(Test-Path $csv^) {
+echo             $data = Import-Csv $csv
+echo             $design = [int]$data.'Design Capacity'
+echo             $full = [int]$data.'Full Charged Capacity'
+echo             $cycles = $data.'Cycle Count'
 echo             if ^($design -gt 0 -and $full -gt 0^) {
 echo                 $pct = [math]::Round^(^($full / $design^) * 100^)
 echo                 "BATTERY_HEALTH=$pct%%"
 echo             } else { "BATTERY_HEALTH=Unknown" }
-echo             if ^($cycles^) { "BATTERY_CYCLES=$cycles" } else { "BATTERY_CYCLES=0" }
-echo         } catch { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
+echo             "BATTERY_CYCLES=$cycles"
+echo         } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
 echo     } else { "BATTERY_HEALTH=Unknown"; "BATTERY_CYCLES=0" }
 echo } else {
 echo     "HAS_BATTERY=false"
