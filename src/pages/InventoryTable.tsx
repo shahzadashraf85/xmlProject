@@ -148,40 +148,40 @@ export default function InventoryTable() {
             </div>
 
             {/* Table Area */}
-            <div className="flex-1 overflow-auto p-4">
-                <div className="border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-                    <table className="w-full text-sm text-left border-collapse">
-                        <thead className="bg-gray-100 text-gray-700 font-bold sticky top-0 z-10 shadow-sm print:bg-white">
+            <div className="flex-1 overflow-auto p-4 print:p-0 print:overflow-visible">
+                <div className="border border-gray-200 rounded-lg shadow-sm overflow-hidden print:shadow-none print:border-none print:rounded-none">
+                    <table className="w-full text-sm text-left border-collapse print:text-xs">
+                        <thead className="bg-gray-100 text-gray-700 font-bold sticky top-0 z-10 shadow-sm print:shadow-none print:static print:bg-white print:text-black print:border-b-2 print:border-black">
                             <tr>
-                                <th className="p-3 border-b border-gray-200 w-32">
+                                <th className="p-3 border-b border-gray-200 w-32 print:border-black print:p-1">
                                     <div className="mb-1">Serial</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('serial', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-32">
+                                <th className="p-3 border-b border-gray-200 w-32 print:border-black print:p-1">
                                     <div className="mb-1">Brand</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('brand', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-40">
+                                <th className="p-3 border-b border-gray-200 w-40 print:border-black print:p-1">
                                     <div className="mb-1">Model</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('model', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-48">
+                                <th className="p-3 border-b border-gray-200 w-48 print:border-black print:p-1">
                                     <div className="mb-1">CPU</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('cpu', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-20">
+                                <th className="p-3 border-b border-gray-200 w-20 print:border-black print:p-1">
                                     <div className="mb-1">RAM</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('ram', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-24">
+                                <th className="p-3 border-b border-gray-200 w-24 print:border-black print:p-1">
                                     <div className="mb-1">Storage</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('storage', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-24">
+                                <th className="p-3 border-b border-gray-200 w-24 print:border-black print:p-1">
                                     <div className="mb-1">Health</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('health', e.target.value)} />
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-24">
+                                <th className="p-3 border-b border-gray-200 w-24 print:border-black print:p-1">
                                     <div className="mb-1">Grade</div>
                                     <select className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('grade', e.target.value)}>
                                         <option value="">All</option>
@@ -190,7 +190,7 @@ export default function InventoryTable() {
                                         <option value="C">C</option>
                                     </select>
                                 </th>
-                                <th className="p-3 border-b border-gray-200 w-32">
+                                <th className="p-3 border-b border-gray-200 w-32 print:border-black print:p-1">
                                     <div className="mb-1">Status</div>
                                     <select className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('status', e.target.value)}>
                                         <option value="">All</option>
@@ -243,12 +243,46 @@ export default function InventoryTable() {
 
             <style>{`
                 @media print {
-                    @page { size: landscape; margin: 0.5cm; }
-                    body { background: white; }
+                    @page { 
+                        size: landscape; 
+                        margin: 1cm;
+                    }
+                    body { 
+                        background: white; 
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
                     .print\\:hidden { display: none !important; }
                     .print\\:break-inside-avoid { break-inside: avoid; }
-                    table { font-size: 10px; width: 100%; }
-                    th, td { padding: 4px; border-bottom: 1px solid #ddd; }
+                    
+                    /* Reset container styles for print to prevent cutting off */
+                    html, body, #root { 
+                        height: auto !important; 
+                        overflow: visible !important; 
+                        display: block !important;
+                    }
+                    
+                    table { 
+                        width: 100% !important; 
+                        border-collapse: collapse !important;
+                        font-family: sans-serif;
+                    }
+                    
+                    /* Ensure headers print on every page */
+                    thead { display: table-header-group; }
+                    tr { break-inside: avoid; }
+                    
+                    /* Custom print Grid borders */
+                    th, td { 
+                        border: 1px solid #ddd !important;
+                        padding: 6px 4px !important;
+                    }
+                    
+                    /* Clean up colors for ink saving */
+                    th { 
+                        background-color: #f3f4f6 !important; 
+                        color: black !important;
+                    }
                 }
             `}</style>
         </div>

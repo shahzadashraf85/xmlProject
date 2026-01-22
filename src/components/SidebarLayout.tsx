@@ -25,9 +25,9 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     ];
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-gray-100 print:h-auto print:bg-white print:block">
             {/* Sidebar */}
-            <div className="w-64 bg-gray-900 text-white shadow-xl flex flex-col">
+            <div className="w-64 bg-gray-900 text-white shadow-xl flex flex-col print:hidden">
                 <div className="p-6 border-b border-gray-800">
                     <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                         Laptek Systems
@@ -73,7 +73,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto print:overflow-visible print:w-full print:h-auto">
                 {children}
             </div>
         </div>
