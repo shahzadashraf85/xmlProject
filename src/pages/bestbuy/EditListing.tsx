@@ -9,6 +9,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { SimpleSelect } from '../../components/ui/simple-select';
 import { Switch } from '../../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { ImageUpload } from '../../components/ImageUpload';
 import { toast } from 'sonner';
 import { Save, Sparkles, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 
@@ -292,7 +293,13 @@ export default function BestBuyEditListing() {
                                                 {/* Input Section */}
                                                 <div className="w-full md:w-2/3">
                                                     <div className="relative">
-                                                        {col.allowed_values && col.allowed_values.length > 0 ? (
+                                                        {col.code.toLowerCase().includes('image') || col.code.toLowerCase().includes('img') ? (
+                                                            <ImageUpload
+                                                                value={val}
+                                                                onChange={(url) => handleFieldChange(col.code, url)}
+                                                                label={col.label}
+                                                            />
+                                                        ) : col.allowed_values && col.allowed_values.length > 0 ? (
                                                             <SimpleSelect
                                                                 value={val}
                                                                 onChange={(e) => handleFieldChange(col.code, e.target.value)}
