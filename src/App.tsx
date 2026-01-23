@@ -9,6 +9,7 @@ import Inventory from './pages/Inventory';
 import Messages from './pages/Messages';
 import InventoryTable from './pages/InventoryTable';
 import PartsManager from './pages/PartsManager';
+import UiDemo from './pages/UiDemo';
 
 
 function App() {
@@ -85,6 +86,15 @@ function App() {
                   <PartsManager />
                 </SidebarLayout>
               </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ui-demo"
+            element={
+              <SidebarLayout>
+                <UiDemo />
+              </SidebarLayout>
             }
           />
 
