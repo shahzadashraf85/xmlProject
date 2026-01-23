@@ -4,6 +4,18 @@ import * as XLSX from 'xlsx';
 
 import type { InventoryItem } from '../types';
 
+// Shadcn Components
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+
+// Icons
+import {
+    Package, Download, Search, Activity,
+    Cpu, HardDrive, PenTool, Trash2
+} from 'lucide-react';
+
 export default function Inventory() {
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -90,8 +102,6 @@ export default function Inventory() {
         }
     }
 
-
-
     async function updateField(id: string, updates: Partial<InventoryItem>) {
         try {
             const { error } = await supabase
@@ -144,6 +154,8 @@ export default function Inventory() {
 
     const stats = {
         total: items.length,
+        ready: items.filter(i => i.status === 'ready_to_ship').length,
+        repair: items.filter(i => i.status === 'in_repair').length,
         gradeA: items.filter(i => i.grade === 'A').length,
         gradeB: items.filter(i => i.grade === 'B').length,
         gradeC: items.filter(i => i.grade === 'C').length,
@@ -158,14 +170,14 @@ export default function Inventory() {
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusVariant = (status: string) => {
         switch (status) {
-            case 'pending_triage': return 'bg-orange-100 text-orange-800';
-            case 'in_repair': return 'bg-blue-100 text-blue-800';
-            case 'ready_to_ship': return 'bg-green-100 text-green-800';
-            case 'shipped': return 'bg-purple-100 text-purple-800';
-            case 'scrapped': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'pending_triage': return 'secondary';
+            case 'in_repair': return 'default'; // blue typically
+            case 'ready_to_ship': return 'outline'; // we can style green manually if needed or leave outline
+            case 'shipped': return 'secondary';
+            case 'scrapped': return 'destructive';
+            default: return 'outline';
         }
     };
 
@@ -205,111 +217,139 @@ export default function Inventory() {
     return (
         <div className="flex h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
             {/* LEFT SIDEBAR: Device List */}
-            <div className="w-[360px] bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10 shadow-sm">
-                {/* Header */}
-                <div className="p-4 bg-white border-b border-gray-100">
-                    <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <span>📦</span> Inventory
-                        <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{stats.total}</span>
-                    </h1>
+            <div className="w-[380px] bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10 shadow-sm">
+
+                {/* Stats Widget (Top of Sidebar) */}
+                <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50/50 border-b">
+                    <Card className="shadow-none border-blue-100 bg-blue-50/30">
+                        <CardHeader className="p-3 pb-1">
+                            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                <Package size={12} /> Total Stock
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 pt-0">
+                            <div className="text-xl font-bold text-gray-900">{stats.total}</div>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-none border-green-100 bg-green-50/30">
+                        <CardHeader className="p-3 pb-1">
+                            <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                <Activity size={12} /> Ready
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 pt-0">
+                            <div className="text-xl font-bold text-green-700">{stats.ready}</div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Filters */}
-                <div className="p-3 border-b border-gray-100 space-y-3 bg-gray-50/50">
+                <div className="p-3 space-y-3 bg-white border-b">
                     <div className="relative">
-                        <input
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
                             type="text"
-                            placeholder="Search devices..."
-                            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
+                            placeholder="Search serial, model..."
+                            className="pl-9 h-9 bg-gray-50 border-gray-200"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
-                        <span className="absolute left-3 top-2.5 text-gray-400 text-xs">🔍</span>
                     </div>
                     <div className="flex gap-2">
-                        <select
-                            className="flex-1 p-2 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={filterStatus}
-                            onChange={e => setFilterStatus(e.target.value)}
-                        >
-                            <option value="all">Status: All</option>
-                            <option value="pending_triage">Pending</option>
-                            <option value="in_repair">In Repair</option>
-                            <option value="ready_to_ship">Ready</option>
-                            <option value="shipped">Shipped</option>
-                        </select>
-                        <select
-                            className="flex-1 p-2 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={filterGrade}
-                            onChange={e => setFilterGrade(e.target.value)}
-                        >
-                            <option value="all">Grade: All</option>
-                            <option value="A">Grade A</option>
-                            <option value="B">Grade B</option>
-                            <option value="C">Grade C</option>
-                            <option value="C">C Grade</option>
-                        </select>
+                        <div className="flex-1">
+                            <select
+                                className="w-full h-8 text-xs border rounded px-2 bg-gray-50 text-gray-600 outline-none focus:ring-1 focus:ring-blue-500"
+                                value={filterStatus}
+                                onChange={e => setFilterStatus(e.target.value)}
+                            >
+                                <option value="all">All Status</option>
+                                <option value="pending_triage">Pending</option>
+                                <option value="in_repair">In Repair</option>
+                                <option value="ready_to_ship">Ready</option>
+                                <option value="shipped">Shipped</option>
+                            </select>
+                        </div>
+                        <div className="w-24">
+                            <select
+                                className="w-full h-8 text-xs border rounded px-2 bg-gray-50 text-gray-600 outline-none focus:ring-1 focus:ring-blue-500"
+                                value={filterGrade}
+                                onChange={e => setFilterGrade(e.target.value)}
+                            >
+                                <option value="all">All Grades</option>
+                                <option value="A">Grade A</option>
+                                <option value="B">Grade B</option>
+                                <option value="C">Grade C</option>
+                            </select>
+                        </div>
                     </div>
-                    {/* Export Button */}
-                    <button
-                        onClick={() => handleExport(filteredItems)}
-                        className="w-full flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-                    >
-                        <span>📊</span> Export Filtered ({filteredItems.length})
-                    </button>
                 </div>
 
                 {/* Device List Items */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-50/30">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center p-8 text-gray-400">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                        <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-2"></div>
                             <span className="text-xs">Loading items...</span>
                         </div>
                     ) : filteredItems.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">
-                            <span className="text-3xl block mb-2 opacity-50">📋</span>
-                            <p className="text-sm">No match found.</p>
+                        <div className="p-8 text-center text-muted-foreground">
+                            <Package className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                            <p className="text-sm">No items found</p>
                         </div>
                     ) : (
-                        <div className="divide-y divide-gray-50">
+                        <div className="divide-y divide-gray-100">
                             {filteredItems.map(item => (
                                 <div
                                     key={item.id}
                                     onClick={() => setSelectedItem(item)}
-                                    className={`group p-4 cursor-pointer transition-all hover:bg-gray-50 border-l-4 ${selectedItem?.id === item.id
-                                        ? 'bg-blue-50/50 border-blue-600'
-                                        : 'border-transparent'
+                                    className={`group p-4 cursor-pointer transition-all hover:bg-white hover:shadow-sm ${selectedItem?.id === item.id
+                                        ? 'bg-white border-l-4 border-l-blue-600 shadow-sm'
+                                        : 'border-l-4 border-l-transparent'
                                         }`}
                                 >
-                                    <div className="flex justify-between items-start mb-1.5">
-                                        <h3 className={`font-semibold text-sm ${selectedItem?.id === item.id ? 'text-blue-900' : 'text-gray-900'}`}>
+                                    <div className="flex justify-between items-start mb-1">
+                                        <h3 className={`font-semibold text-sm truncate pr-2 ${selectedItem?.id === item.id ? 'text-blue-700' : 'text-gray-900'}`}>
                                             {item.brand} {item.model}
                                         </h3>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border ${getGradeColor(item.grade)}`}>
+                                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 ${getGradeColor(item.grade)}`}>
                                             {item.grade}
-                                        </span>
+                                        </Badge>
                                     </div>
-                                    <p className="text-xs text-gray-500 font-mono mb-2 truncate" title={item.serial_number}>
-                                        SN: {item.serial_number}
-                                    </p>
-                                    <div className="flex items-center gap-2 text-[11px] text-gray-600">
-                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-medium">
-                                            {item.specs?.ram_gb || 0}GB
-                                        </span>
-                                        <span className="text-gray-300">•</span>
-                                        <span className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-medium">
-                                            {item.specs?.storage_gb || 0}GB
-                                        </span>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <code className="text-[10px] text-muted-foreground bg-gray-100 px-1 rounded">{item.serial_number}</code>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                                        <div className="flex items-center gap-1">
+                                            <Cpu size={10} />
+                                            <span>{item.specs?.processor?.split(' ')[0] || '-'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <HardDrive size={10} />
+                                            <span>{item.specs?.ram_gb}GB</span>
+                                        </div>
                                         <div className="flex-1"></div>
-                                        <span className={`px-1.5 py-0.5 rounded-md ${getStatusColor(item.status)}`}>
+                                        <Badge variant={getStatusVariant(item.status as any) as any} className="text-[9px] h-4 px-1 py-0 font-normal">
                                             {item.status?.replace('_', ' ')}
-                                        </span>
+                                        </Badge>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
+                </div>
+
+                {/* Export Widget (Bottom) */}
+                <div className="p-3 border-t bg-white">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExport(filteredItems)}
+                        className="w-full text-xs h-8"
+                    >
+                        <Download className="mr-2 h-3 w-3" />
+                        Export List ({filteredItems.length})
+                    </Button>
                 </div>
 
                 {/* Footer Stats */}
@@ -319,6 +359,8 @@ export default function Inventory() {
                     <span>C: {stats.gradeC}</span>
                 </div>
             </div>
+
+
 
             {/* RIGHT MAIN: Device Layout (COMPACT) */}
             <div className="flex-1 overflow-y-auto bg-gray-50/50 p-4">
@@ -345,12 +387,12 @@ export default function Inventory() {
                                 </div>
 
                                 <div className="flex gap-2 flex-shrink-0">
-                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded text-xs border border-blue-100 font-medium px-3 flex items-center gap-1">
-                                        ✏️ Edit
-                                    </button>
-                                    <button onClick={() => deleteItem(selectedItem.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded border border-transparent hover:border-red-100">
-                                        🗑️
-                                    </button>
+                                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                                        <PenTool className="mr-2 h-3 w-3" /> Edit
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-500 hover:bg-red-50" onClick={() => deleteItem(selectedItem!.id)}>
+                                        <Trash2 size={16} />
+                                    </Button>
                                 </div>
                             </div>
 
@@ -362,7 +404,7 @@ export default function Inventory() {
                                         {['A', 'B', 'C'].map(g => (
                                             <button
                                                 key={g}
-                                                onClick={() => updateField(selectedItem.id, { grade: g })}
+                                                onClick={() => updateField(selectedItem!.id, { grade: g })}
                                                 className={`w-6 h-6 rounded text-xs font-bold flex items-center justify-center transition-all ${selectedItem.grade === g
                                                     ? g === 'A' ? 'bg-green-500 text-white' : g === 'B' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'
                                                     : 'text-gray-400 hover:text-gray-600'
@@ -380,7 +422,7 @@ export default function Inventory() {
                                     <span className="text-[10px] uppercase font-bold text-gray-400">Status</span>
                                     <select
                                         value={selectedItem.status}
-                                        onChange={e => updateField(selectedItem.id, { status: e.target.value })}
+                                        onChange={(e: any) => updateField(selectedItem!.id, { status: e.target.value })}
                                         className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 cursor-pointer hover:text-blue-600 p-0"
                                     >
                                         <option value="pending_triage">🟠 Pending Triage</option>
@@ -398,7 +440,7 @@ export default function Inventory() {
                                     <input
                                         type="text"
                                         defaultValue={selectedItem.location || ''}
-                                        onBlur={e => updateField(selectedItem.id, { location: e.target.value })}
+                                        onBlur={(e: any) => updateField(selectedItem!.id, { location: e.target.value })}
                                         placeholder="Shelf ID..."
                                         className="text-xs border-none bg-transparent font-medium text-gray-700 focus:ring-0 p-0 w-full placeholder-gray-300"
                                     />
@@ -411,7 +453,7 @@ export default function Inventory() {
                                     <input
                                         type="text"
                                         defaultValue={selectedItem.comments || ''}
-                                        onBlur={e => updateField(selectedItem.id, { comments: e.target.value })}
+                                        onBlur={(e: any) => updateField(selectedItem!.id, { comments: e.target.value })}
                                         placeholder="Add comment..."
                                         className="text-sm border-none bg-red-50 font-bold text-red-600 focus:ring-2 focus:ring-red-300 p-1 px-2 w-full placeholder-red-300 rounded"
                                     />
@@ -548,333 +590,335 @@ export default function Inventory() {
             </div>
 
             {/* EDIT MODAL */}
-            {isEditing && selectedItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <h2 className="text-lg font-bold text-gray-800">Edit Device Details</h2>
-                            <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-                        </div>
-
-                        {/* Tabs */}
-                        <div className="flex border-b border-gray-100 text-sm font-medium text-gray-500">
-                            {['Basic Info', 'Hardware Specs', 'System & Network'].map((tab, i) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => {
-                                        const tabs = document.querySelectorAll('[data-tab-content]');
-                                        tabs.forEach(t => t.classList.add('hidden'));
-                                        tabs[i].classList.remove('hidden');
-
-                                        const btns = document.querySelectorAll('[data-tab-btn]');
-                                        btns.forEach(b => b.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600', 'bg-blue-50/50'));
-                                        btns[i].classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'bg-blue-50/50');
-                                    }}
-                                    data-tab-btn
-                                    className={`flex-1 py-3 px-4 transition-colors ${i === 0 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'hover:bg-gray-50'}`}
-                                >
-                                    {tab}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                            {/* TAB 1: BASIC INFO */}
-                            <div data-tab-content className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Brand</label>
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                            value={editForm.brand || ''}
-                                            onChange={e => setEditForm({ ...editForm, brand: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Model</label>
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                            value={editForm.model || ''}
-                                            onChange={e => setEditForm({ ...editForm, model: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Serial Number</label>
-                                    <input
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
-                                        value={editForm.serial_number || ''}
-                                        onChange={e => setEditForm({ ...editForm, serial_number: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Grade</label>
-                                        <div className="flex gap-2">
-                                            {['A', 'B', 'C'].map(g => (
-                                                <button
-                                                    key={g}
-                                                    onClick={() => setEditForm({ ...editForm, grade: g })}
-                                                    className={`flex-1 py-2 rounded-lg font-bold border ${editForm.grade === g
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                                                >
-                                                    {g}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
-                                        <select
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                                            value={editForm.status || ''}
-                                            onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                                        >
-                                            <option value="pending_triage">Pending Triage</option>
-                                            <option value="in_repair">In Repair</option>
-                                            <option value="ready_to_ship">Ready to Ship</option>
-                                            <option value="shipped">Shipped</option>
-                                            <option value="scrapped">Scrapped</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Location</label>
-                                    <input
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                        placeholder="e.g. Shelf A-12, Bin 3..."
-                                        value={editForm.location || ''}
-                                        onChange={e => setEditForm({ ...editForm, location: e.target.value })}
-                                    />
-                                </div>
+            {
+                isEditing && selectedItem && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+                            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                <h2 className="text-lg font-bold text-gray-800">Edit Device Details</h2>
+                                <button onClick={() => setIsEditing(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                             </div>
 
-                            {/* TAB 2: HARDWARE SPECS */}
-                            <div data-tab-content className="space-y-4 hidden">
-                                <div className="space-y-4">
-                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                        <h3 className="text-xs font-bold text-blue-600 uppercase mb-3">Processor (CPU)</h3>
-                                        <div className="space-y-3">
+                            {/* Tabs */}
+                            <div className="flex border-b border-gray-100 text-sm font-medium text-gray-500">
+                                {['Basic Info', 'Hardware Specs', 'System & Network'].map((tab, i) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => {
+                                            const tabs = document.querySelectorAll('[data-tab-content]');
+                                            tabs.forEach(t => t.classList.add('hidden'));
+                                            tabs[i].classList.remove('hidden');
+
+                                            const btns = document.querySelectorAll('[data-tab-btn]');
+                                            btns.forEach(b => b.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600', 'bg-blue-50/50'));
+                                            btns[i].classList.add('text-blue-600', 'border-b-2', 'border-blue-600', 'bg-blue-50/50');
+                                        }}
+                                        data-tab-btn
+                                        className={`flex-1 py-3 px-4 transition-colors ${i === 0 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'hover:bg-gray-50'}`}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                                {/* TAB 1: BASIC INFO */}
+                                <div data-tab-content className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Brand</label>
                                             <input
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="Processor Name"
-                                                value={editForm.specs?.processor || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, processor: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={editForm.brand || ''}
+                                                onChange={e => setEditForm({ ...editForm, brand: e.target.value })}
                                             />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Model</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={editForm.model || ''}
+                                                onChange={e => setEditForm({ ...editForm, model: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Serial Number</label>
+                                        <input
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                            value={editForm.serial_number || ''}
+                                            onChange={e => setEditForm({ ...editForm, serial_number: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Grade</label>
+                                            <div className="flex gap-2">
+                                                {['A', 'B', 'C'].map(g => (
+                                                    <button
+                                                        key={g}
+                                                        onClick={() => setEditForm({ ...editForm, grade: g })}
+                                                        className={`flex-1 py-2 rounded-lg font-bold border ${editForm.grade === g
+                                                            ? 'bg-blue-600 text-white border-blue-600'
+                                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                                                    >
+                                                        {g}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Status</label>
+                                            <select
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                                value={editForm.status || ''}
+                                                onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                                            >
+                                                <option value="pending_triage">Pending Triage</option>
+                                                <option value="in_repair">In Repair</option>
+                                                <option value="ready_to_ship">Ready to Ship</option>
+                                                <option value="shipped">Shipped</option>
+                                                <option value="scrapped">Scrapped</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Location</label>
+                                        <input
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="e.g. Shelf A-12, Bin 3..."
+                                            value={editForm.location || ''}
+                                            onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* TAB 2: HARDWARE SPECS */}
+                                <div data-tab-content className="space-y-4 hidden">
+                                    <div className="space-y-4">
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <h3 className="text-xs font-bold text-blue-600 uppercase mb-3">Processor (CPU)</h3>
+                                            <div className="space-y-3">
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                    placeholder="Processor Name"
+                                                    value={editForm.specs?.processor || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, processor: e.target.value } })}
+                                                />
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <input
+                                                        type="number"
+                                                        className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                        placeholder="Cores"
+                                                        value={editForm.specs?.processor_cores || ''}
+                                                        onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, processor_cores: parseInt(e.target.value) || 0 } })}
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                        placeholder="Speed (MHz)"
+                                                        value={editForm.specs?.processor_speed_mhz || ''}
+                                                        onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, processor_speed_mhz: parseInt(e.target.value) || 0 } })}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <h3 className="text-xs font-bold text-purple-600 uppercase mb-3">Memory (RAM)</h3>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <input
                                                     type="number"
                                                     className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                    placeholder="Cores"
-                                                    value={editForm.specs?.processor_cores || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, processor_cores: parseInt(e.target.value) || 0 } })}
+                                                    placeholder="Size (GB)"
+                                                    value={editForm.specs?.ram_gb || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, ram_gb: parseInt(e.target.value) || 0 } })}
                                                 />
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                    placeholder="Type (DDR4...)"
+                                                    value={editForm.specs?.ram_type || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, ram_type: e.target.value } })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <h3 className="text-xs font-bold text-green-600 uppercase mb-3">Storage</h3>
+                                            <div className="grid grid-cols-2 gap-3">
                                                 <input
                                                     type="number"
                                                     className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                    placeholder="Speed (MHz)"
-                                                    value={editForm.specs?.processor_speed_mhz || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, processor_speed_mhz: parseInt(e.target.value) || 0 } })}
+                                                    placeholder="Total Storage (GB)"
+                                                    value={editForm.specs?.storage_gb || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, storage_gb: parseInt(e.target.value) || 0 } })}
+                                                />
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                    placeholder="Primary Type (SSD/HDD)"
+                                                    value={editForm.specs?.storage_type || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, storage_type: e.target.value } })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <h3 className="text-xs font-bold text-orange-600 uppercase mb-3">Graphics (GPU)</h3>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm mb-3"
+                                                placeholder="Graphics Card Name"
+                                                value={editForm.specs?.graphics_card || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, graphics_card: e.target.value } })}
+                                            />
+                                            <input
+                                                type="number"
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                placeholder="VRAM (MB)"
+                                                value={editForm.specs?.graphics_vram_mb || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, graphics_vram_mb: parseInt(e.target.value) || 0 } })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* TAB 3: SYSTEM & NETWORK */}
+                                <div data-tab-content className="space-y-4 hidden">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Operating System</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                placeholder="OS Name (Windows 10...)"
+                                                value={editForm.specs?.os_name || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, os_name: e.target.value } })}
+                                            />
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                placeholder="Version / Build"
+                                                value={editForm.specs?.os_version || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, os_version: e.target.value } })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Display</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                placeholder="Screen Size (15.6 inch...)"
+                                                value={editForm.specs?.screen_size || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_size: e.target.value } })}
+                                            />
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                                placeholder="Resolution (1920x1080)"
+                                                value={editForm.specs?.screen_resolution || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_resolution: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="is_touch_screen"
+                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                checked={editForm.specs?.is_touch_screen || false}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, is_touch_screen: e.target.checked } })}
+                                            />
+                                            <label htmlFor="is_touch_screen" className="text-sm text-gray-700 font-medium select-none cursor-pointer">
+                                                Touch Screen
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Network Identifiers</label>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <span className="text-[10px] text-gray-400 uppercase">MAC Address</span>
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
+                                                    value={editForm.specs?.mac_address || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, mac_address: e.target.value } })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] text-gray-400 uppercase">WiFi Adapter</span>
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                                    value={editForm.specs?.wifi_adapter || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, wifi_adapter: e.target.value } })}
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                        <h3 className="text-xs font-bold text-purple-600 uppercase mb-3">Memory (RAM)</h3>
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mt-4">
+                                        <h3 className="text-xs font-bold text-teal-600 uppercase mb-3">Power & Battery</h3>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <input
-                                                type="number"
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="Size (GB)"
-                                                value={editForm.specs?.ram_gb || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, ram_gb: parseInt(e.target.value) || 0 } })}
-                                            />
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="Type (DDR4...)"
-                                                value={editForm.specs?.ram_type || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, ram_type: e.target.value } })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                        <h3 className="text-xs font-bold text-green-600 uppercase mb-3">Storage</h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <input
-                                                type="number"
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="Total Storage (GB)"
-                                                value={editForm.specs?.storage_gb || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, storage_gb: parseInt(e.target.value) || 0 } })}
-                                            />
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="Primary Type (SSD/HDD)"
-                                                value={editForm.specs?.storage_type || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, storage_type: e.target.value } })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                        <h3 className="text-xs font-bold text-orange-600 uppercase mb-3">Graphics (GPU)</h3>
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-200 rounded text-sm mb-3"
-                                            placeholder="Graphics Card Name"
-                                            value={editForm.specs?.graphics_card || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, graphics_card: e.target.value } })}
-                                        />
-                                        <input
-                                            type="number"
-                                            className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                            placeholder="VRAM (MB)"
-                                            value={editForm.specs?.graphics_vram_mb || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, graphics_vram_mb: parseInt(e.target.value) || 0 } })}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* TAB 3: SYSTEM & NETWORK */}
-                            <div data-tab-content className="space-y-4 hidden">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Operating System</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                            placeholder="OS Name (Windows 10...)"
-                                            value={editForm.specs?.os_name || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, os_name: e.target.value } })}
-                                        />
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                            placeholder="Version / Build"
-                                            value={editForm.specs?.os_version || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, os_version: e.target.value } })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Display</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                            placeholder="Screen Size (15.6 inch...)"
-                                            value={editForm.specs?.screen_size || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_size: e.target.value } })}
-                                        />
-                                        <input
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                            placeholder="Resolution (1920x1080)"
-                                            value={editForm.specs?.screen_resolution || ''}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_resolution: e.target.value } })}
-                                        />
-                                    </div>
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="is_touch_screen"
-                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            checked={editForm.specs?.is_touch_screen || false}
-                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, is_touch_screen: e.target.checked } })}
-                                        />
-                                        <label htmlFor="is_touch_screen" className="text-sm text-gray-700 font-medium select-none cursor-pointer">
-                                            Touch Screen
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Network Identifiers</label>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <span className="text-[10px] text-gray-400 uppercase">MAC Address</span>
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
-                                                value={editForm.specs?.mac_address || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, mac_address: e.target.value } })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <span className="text-[10px] text-gray-400 uppercase">WiFi Adapter</span>
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                                value={editForm.specs?.wifi_adapter || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, wifi_adapter: e.target.value } })}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mt-4">
-                                    <h3 className="text-xs font-bold text-teal-600 uppercase mb-3">Power & Battery</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Status</label>
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                value={editForm.specs?.battery_status || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_status: e.target.value } })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Health</label>
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="e.g. 95%"
-                                                value={editForm.specs?.battery_health || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_health: e.target.value } })}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Cycle Count</label>
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                placeholder="e.g. 45"
-                                                value={editForm.specs?.battery_cycles || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_cycles: e.target.value } })}
-                                            />
-                                        </div>
-                                        <div className="flex items-end">
-                                            <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer">
+                                            <div>
+                                                <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Status</label>
                                                 <input
-                                                    type="checkbox"
-                                                    checked={editForm.specs?.has_battery || false}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, has_battery: e.target.checked } })}
-                                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                    value={editForm.specs?.battery_status || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_status: e.target.value } })}
                                                 />
-                                                Battery Present
-                                            </label>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Health</label>
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                    placeholder="e.g. 95%"
+                                                    value={editForm.specs?.battery_health || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_health: e.target.value } })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Cycle Count</label>
+                                                <input
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                    placeholder="e.g. 45"
+                                                    value={editForm.specs?.battery_cycles || ''}
+                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_cycles: e.target.value } })}
+                                                />
+                                            </div>
+                                            <div className="flex items-end">
+                                                <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={editForm.specs?.has_battery || false}
+                                                        onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, has_battery: e.target.checked } })}
+                                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                    />
+                                                    Battery Present
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                            <button
-                                onClick={() => setIsEditing(false)}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={saveChanges}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-colors"
-                            >
-                                Save Changes
-                            </button>
+                            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setIsEditing(false)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={saveChanges}
+                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-colors"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

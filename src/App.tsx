@@ -10,6 +10,11 @@ import Messages from './pages/Messages';
 import InventoryTable from './pages/InventoryTable';
 import PartsManager from './pages/PartsManager';
 import UiDemo from './pages/UiDemo';
+import BestBuyTemplates from './pages/bestbuy/Templates';
+import BestBuyListings from './pages/bestbuy/Listings';
+import BestBuyNewListing from './pages/bestbuy/NewListing';
+import BestBuyEditListing from './pages/bestbuy/EditListing';
+import BestBuyExports from './pages/bestbuy/Exports';
 
 
 function App() {
@@ -95,6 +100,58 @@ function App() {
               <SidebarLayout>
                 <UiDemo />
               </SidebarLayout>
+            }
+          />
+
+          {/* Best Buy Module Routes */}
+          <Route
+            path="/bestbuy/templates"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <BestBuyTemplates />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bestbuy/listings"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <BestBuyListings />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bestbuy/new"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <BestBuyNewListing />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bestbuy/listings/:id"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <BestBuyEditListing />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bestbuy/exports"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <BestBuyExports />
+                </SidebarLayout>
+              </ProtectedRoute>
             }
           />
 
