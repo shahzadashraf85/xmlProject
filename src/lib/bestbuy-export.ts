@@ -40,8 +40,8 @@ export async function generateBestBuyExport(
         });
     });
 
-    // Insert at A3 (Index 2)
-    XLSX.utils.sheet_add_aoa(worksheet, dataMatrix, { origin: "A3" });
+    // Insert at A2 (Index 1) - Overwriting the second header row as requested
+    XLSX.utils.sheet_add_aoa(worksheet, dataMatrix, { origin: "A2" });
 
     // 4. Generate Output
     const outBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });

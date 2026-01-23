@@ -10,6 +10,7 @@ import { SimpleSelect } from '../../components/ui/simple-select';
 import { Switch } from '../../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { ImageUpload } from '../../components/ImageUpload';
+import { GoogleImageSearch } from '../../components/GoogleImageSearch';
 import { toast } from 'sonner';
 import { Save, Sparkles, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 
@@ -230,110 +231,117 @@ export default function BestBuyEditListing() {
 
                     {groups.map(group => (
                         <TabsContent key={group} value={group} className="space-y-6">
-                            <div className="max-w-4xl mx-auto space-y-0 bg-white rounded-lg shadow-sm border border-gray-200">
-                                {groupedColumns[group].map((col, index) => {
-                                    const val = fields[col.code] || '';
-                                    const isMissing = col.required && !val;
+                            <div className={group === 'Images' ? "grid grid-cols-1 lg:grid-cols-3 gap-6 items-start" : "max-w-4xl mx-auto"}>
+                                <div className={(group === 'Images' ? "lg:col-span-2 " : "") + "space-y-0 bg-white rounded-lg shadow-sm border border-gray-200"}>
+                                    {groupedColumns[group].map((col, index) => {
+                                        const val = fields[col.code] || '';
+                                        const isMissing = col.required && !val;
 
-                                    // Check if this is the first optional field (transition point)
-                                    const isFirstOptional = !col.required && index > 0 && groupedColumns[group][index - 1].required;
+                                        // Check if this is the first optional field (transition point)
+                                        const isFirstOptional = !col.required && index > 0 && groupedColumns[group][index - 1].required;
 
-                                    // Determine input type
-                                    const isLongText = col.label.toLowerCase().includes('description') && !col.label.toLowerCase().includes('short');
+                                        // Determine input type
+                                        const isLongText = col.label.toLowerCase().includes('description') && !col.label.toLowerCase().includes('short');
 
-                                    return (
-                                        <>
-                                            {index === 0 && groupedColumns[group].some(c => c.required) && (
-                                                <div className="bg-red-50 border-b-2 border-red-200 px-6 py-3">
-                                                    <h3 className="text-sm font-bold text-red-800 flex items-center gap-2">
-                                                        <span className="text-red-600 text-lg">*</span>
-                                                        Required Fields
-                                                    </h3>
-                                                    <p className="text-xs text-red-600 mt-1">All fields in this section must be completed</p>
-                                                </div>
-                                            )}
-
-                                            {isFirstOptional && (
-                                                <div className="bg-gray-50 border-y border-gray-200 px-6 py-2">
-                                                    <h3 className="text-sm font-semibold text-gray-600">Optional Fields</h3>
-                                                </div>
-                                            )}
-
-                                            <div className={`p-6 group flex flex-col md:flex-row gap-6 items-start transition-colors border-b border-gray-100 last:border-b-0 ${isMissing ? 'bg-red-50/50' : 'hover:bg-gray-50'}`}>
-
-                                                {/* Label Section */}
-                                                <div className="w-full md:w-1/3 pt-1 space-y-1">
-                                                    <Label className={`text-sm font-semibold leading-tight block ${col.required ? 'text-gray-900' : 'text-gray-600'}`}>
-                                                        {col.label}
-                                                        {col.required && (
-                                                            <span className="text-red-600 font-bold ml-1 text-base" title="Required field">*</span>
-                                                        )}
-                                                        {col.required && (
-                                                            <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">REQUIRED</span>
-                                                        )}
-                                                    </Label>
-
-                                                    <div className="flex flex-col gap-0.5 pt-1">
-                                                        <span className="text-[10px] text-gray-400 font-mono select-all cursor-help w-fit bg-gray-50 px-1 rounded" title="Field Code">
-                                                            {col.code}
-                                                        </span>
-                                                        {col.description && (
-                                                            <p className="text-[11px] text-gray-500 leading-snug pr-4 mt-0.5">
-                                                                {col.description}
-                                                            </p>
-                                                        )}
-                                                        {col.example && (
-                                                            <p className="text-[10px] text-blue-500 italic mt-0.5">
-                                                                e.g. {col.example}
-                                                            </p>
-                                                        )}
+                                        return (
+                                            <>
+                                                {index === 0 && groupedColumns[group].some(c => c.required) && (
+                                                    <div className="bg-red-50 border-b-2 border-red-200 px-6 py-3">
+                                                        <h3 className="text-sm font-bold text-red-800 flex items-center gap-2">
+                                                            <span className="text-red-600 text-lg">*</span>
+                                                            Required Fields
+                                                        </h3>
+                                                        <p className="text-xs text-red-600 mt-1">All fields in this section must be completed</p>
                                                     </div>
-                                                </div>
+                                                )}
 
-                                                {/* Input Section */}
-                                                <div className="w-full md:w-2/3">
-                                                    <div className="relative">
-                                                        {col.code.toLowerCase().includes('image') || col.code.toLowerCase().includes('img') ? (
-                                                            <ImageUpload
-                                                                value={val}
-                                                                onChange={(url) => handleFieldChange(col.code, url)}
-                                                                label={col.label}
-                                                            />
-                                                        ) : col.allowed_values && col.allowed_values.length > 0 ? (
-                                                            <SimpleSelect
-                                                                value={val}
-                                                                onChange={(e) => handleFieldChange(col.code, e.target.value)}
-                                                                className={`bg-white shadow-sm w-full ${isMissing ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                                                                placeholder="Select..."
-                                                                options={col.allowed_values.map(opt => ({ label: opt, value: opt }))}
-                                                            />
-                                                        ) : col.data_type === 'boolean' || (col.label.toLowerCase().includes('?') && !isLongText) ? (
-                                                            <div className="flex items-center gap-3 pt-1 h-9">
-                                                                <Switch
-                                                                    checked={val?.toLowerCase() === 'yes' || val?.toLowerCase() === 'y' || val === 'true'}
-                                                                    onCheckedChange={(c) => handleFieldChange(col.code, c ? 'Yes' : 'No')}
+                                                {isFirstOptional && (
+                                                    <div className="bg-gray-50 border-y border-gray-200 px-6 py-2">
+                                                        <h3 className="text-sm font-semibold text-gray-600">Optional Fields</h3>
+                                                    </div>
+                                                )}
+
+                                                <div className={`p-6 group flex flex-col md:flex-row gap-6 items-start transition-colors border-b border-gray-100 last:border-b-0 ${isMissing ? 'bg-red-50/50' : 'hover:bg-gray-50'}`}>
+
+                                                    {/* Label Section */}
+                                                    <div className="w-full md:w-1/3 pt-1 space-y-1">
+                                                        <Label className={`text-sm font-semibold leading-tight block ${col.required ? 'text-gray-900' : 'text-gray-600'}`}>
+                                                            {col.label}
+                                                            {col.required && (
+                                                                <span className="text-red-600 font-bold ml-1 text-base" title="Required field">*</span>
+                                                            )}
+                                                            {col.required && (
+                                                                <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">REQUIRED</span>
+                                                            )}
+                                                        </Label>
+
+                                                        <div className="flex flex-col gap-0.5 pt-1">
+                                                            <span className="text-[10px] text-gray-400 font-mono select-all cursor-help w-fit bg-gray-50 px-1 rounded" title="Field Code">
+                                                                {col.code}
+                                                            </span>
+                                                            {col.description && (
+                                                                <p className="text-[11px] text-gray-500 leading-snug pr-4 mt-0.5">
+                                                                    {col.description}
+                                                                </p>
+                                                            )}
+                                                            {col.example && (
+                                                                <p className="text-[10px] text-blue-500 italic mt-0.5">
+                                                                    e.g. {col.example}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Input Section */}
+                                                    <div className="w-full md:w-2/3">
+                                                        <div className="relative">
+                                                            {col.code.toLowerCase().includes('image') || col.code.toLowerCase().includes('img') ? (
+                                                                <ImageUpload
+                                                                    value={val}
+                                                                    onChange={(url) => handleFieldChange(col.code, url)}
+                                                                    label={col.label}
                                                                 />
-                                                                <span className={`text-sm font-medium ${val ? 'text-gray-900' : 'text-gray-500'}`}>{val || 'No'}</span>
-                                                            </div>
-                                                        ) : isLongText ? (
-                                                            <Textarea
-                                                                value={val}
-                                                                onChange={e => handleFieldChange(col.code, e.target.value)}
-                                                                className={`min-h-[120px] shadow-sm bg-white w-full resize-y ${isMissing ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                                                            />
-                                                        ) : (
-                                                            <Input
-                                                                value={val}
-                                                                onChange={e => handleFieldChange(col.code, e.target.value)}
-                                                                className={`shadow-sm bg-white w-full hover:border-gray-400 transition-colors ${isMissing ? 'border-red-300 ring-2 ring-red-100' : ''}`}
-                                                            />
-                                                        )}
+                                                            ) : col.allowed_values && col.allowed_values.length > 0 ? (
+                                                                <SimpleSelect
+                                                                    value={val}
+                                                                    onChange={(e) => handleFieldChange(col.code, e.target.value)}
+                                                                    className={`bg-white shadow-sm w-full ${isMissing ? 'border-red-300 ring-2 ring-red-100' : ''}`}
+                                                                    placeholder="Select..."
+                                                                    options={col.allowed_values.map(opt => ({ label: opt, value: opt }))}
+                                                                />
+                                                            ) : col.data_type === 'boolean' || (col.label.toLowerCase().includes('?') && !isLongText) ? (
+                                                                <div className="flex items-center gap-3 pt-1 h-9">
+                                                                    <Switch
+                                                                        checked={val?.toLowerCase() === 'yes' || val?.toLowerCase() === 'y' || val === 'true'}
+                                                                        onCheckedChange={(c) => handleFieldChange(col.code, c ? 'Yes' : 'No')}
+                                                                    />
+                                                                    <span className={`text-sm font-medium ${val ? 'text-gray-900' : 'text-gray-500'}`}>{val || 'No'}</span>
+                                                                </div>
+                                                            ) : isLongText ? (
+                                                                <Textarea
+                                                                    value={val}
+                                                                    onChange={e => handleFieldChange(col.code, e.target.value)}
+                                                                    className={`min-h-[120px] shadow-sm bg-white w-full resize-y ${isMissing ? 'border-red-300 ring-2 ring-red-100' : ''}`}
+                                                                />
+                                                            ) : (
+                                                                <Input
+                                                                    value={val}
+                                                                    onChange={e => handleFieldChange(col.code, e.target.value)}
+                                                                    className={`shadow-sm bg-white w-full hover:border-gray-400 transition-colors ${isMissing ? 'border-red-300 ring-2 ring-red-100' : ''}`}
+                                                                />
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </>
-                                    );
-                                })}
+                                            </>
+                                        );
+                                    })}
+                                </div>
+                                {group === 'Images' && (
+                                    <div className="lg:col-span-1 sticky top-6">
+                                        <GoogleImageSearch initialQuery={listing?.product_name || ''} />
+                                    </div>
+                                )}
                             </div>
                         </TabsContent>
                     ))}
