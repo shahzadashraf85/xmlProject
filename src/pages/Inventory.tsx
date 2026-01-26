@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 // Icons
 import {
     Package, Download, Search, Activity,
-    Cpu, HardDrive, PenTool, Trash2
+    Cpu, HardDrive, PenTool, Trash2, Printer
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -24,6 +25,7 @@ export default function Inventory() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterGrade, setFilterGrade] = useState('all');
     const [isEditing, setIsEditing] = useState(false);
+    const navigate = useNavigate();
 
     // Edit Form State
     const [editForm, setEditForm] = useState<Partial<InventoryItem>>({});
@@ -136,6 +138,19 @@ export default function Inventory() {
         } catch (err) {
             alert('Error deleting item');
         }
+    }
+
+    function handlePrintLabel(item: InventoryItem) {
+        const params = new URLSearchParams({
+            serialNumber: item.serial_number || '',
+            brand: item.brand || '',
+            processor: item.specs?.processor || '',
+            ram: item.specs?.ram_gb ? `${item.specs.ram_gb}GB` : '',
+            ssd: item.specs?.storage_gb ? `${item.specs.storage_gb}GB` : '',
+            grade: item.grade || '',
+            comments: item.comments || ''
+        });
+        navigate(`/label-printer?${params.toString()}`);
     }
 
     const filteredItems = items.filter(item => {
@@ -387,6 +402,9 @@ export default function Inventory() {
                                 </div>
 
                                 <div className="flex gap-2 flex-shrink-0">
+                                    <Button variant="outline" size="sm" onClick={() => handlePrintLabel(selectedItem)}>
+                                        <Printer className="mr-2 h-3 w-3" /> Print Label
+                                    </Button>
                                     <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                                         <PenTool className="mr-2 h-3 w-3" /> Edit
                                     </Button>
