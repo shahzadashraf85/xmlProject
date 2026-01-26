@@ -313,8 +313,10 @@ if not errorlevel 1 (
     echo Device has been added to inventory.
     echo Serial Number: %SERIAL%
     echo.
-    echo Opening web dashboard...
-    start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%"
+    echo Shutting down PC in 10 seconds...
+    echo Press Ctrl+C to cancel shutdown.
+    shutdown /s /t 10 /c "Laptop registration complete - Auto shutdown"
+    timeout /t 11 >nul
 )
 
 :: Cleanup
