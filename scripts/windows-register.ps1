@@ -131,13 +131,11 @@ try {
             Write-Host "No duplicate entry will be created." -ForegroundColor White
             Write-Host ""
             
-            # Open web dashboard to show existing device
-            $openUrl = "https://xmlproject.vercel.app/inventory?search=$serialNumber&access_token=$accessToken&refresh_token=$refreshToken"
-            Write-Host "Opening existing device in web dashboard..." -ForegroundColor Yellow
-            Start-Process $openUrl
-            
-            Write-Host "Press any key to exit..." -ForegroundColor Gray
-            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            # Shutdown the PC
+            Write-Host "Shutting down PC in 10 seconds..." -ForegroundColor Yellow
+            Write-Host "Press Ctrl+C to cancel shutdown." -ForegroundColor Gray
+            Start-Sleep -Seconds 10
+            Stop-Computer -Force
             exit 0
         }
         
@@ -188,10 +186,11 @@ try {
     Write-Host "Serial Number: $serialNumber" -ForegroundColor Cyan
     Write-Host ""
 
-    # Auto-Login to Web App
-    $openUrl = "https://xmlproject.vercel.app/inventory?search=$serialNumber&access_token=$accessToken&refresh_token=$refreshToken"
-    Write-Host "Opening web dashboard..." -ForegroundColor Yellow
-    Start-Process $openUrl
+    # Shutdown the PC
+    Write-Host "Shutting down PC in 10 seconds..." -ForegroundColor Yellow
+    Write-Host "Press Ctrl+C to cancel shutdown." -ForegroundColor Gray
+    Start-Sleep -Seconds 10
+    Stop-Computer -Force
 
 } catch {
     Write-Host ""
