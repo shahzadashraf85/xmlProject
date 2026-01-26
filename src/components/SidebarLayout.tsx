@@ -13,7 +13,8 @@ import {
     Menu,
     FileSpreadsheet,
     ShoppingBag,
-    Download
+    Download,
+    Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -38,6 +39,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         { name: 'Master Inventory', path: '/inventory-grid', icon: <Grid size={20} /> },
         { name: 'Parts Management', path: '/parts', icon: <Wrench size={20} /> },
         { name: 'Messages', path: '/messages', icon: <Mail size={20} /> },
+        { name: 'Label Printer', path: '/label-printer', icon: <Printer size={20} /> },
 
         // Best Buy Module
         { name: 'Best Buy Templates', path: '/bestbuy/templates', icon: <FileSpreadsheet size={20} /> },
