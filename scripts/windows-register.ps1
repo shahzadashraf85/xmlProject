@@ -148,13 +148,32 @@ try {
     }
     # ===== END DUPLICATE CHECK =====
 
+    # ===== ASK FOR GRADE =====
+    Write-Host "Please enter the laptop grade:" -ForegroundColor Yellow
+    Write-Host "  A - Excellent condition" -ForegroundColor Gray
+    Write-Host "  B - Good condition" -ForegroundColor Gray
+    Write-Host "  C - Fair condition" -ForegroundColor Gray
+    
+    do {
+        $grade = Read-Host "Grade (A/B/C)"
+        $grade = $grade.ToUpper().Trim()
+        
+        if ($grade -notin @("A", "B", "C")) {
+            Write-Host "Invalid grade. Please enter A, B, or C." -ForegroundColor Red
+        }
+    } while ($grade -notin @("A", "B", "C"))
+    
+    Write-Host "✓ Grade set to: $grade" -ForegroundColor Green
+    Write-Host ""
+    # ===== END GRADE INPUT =====
+
     # Prepare JSON Payload
     $payload = @{
         brand = $brand
         model = $model
         serial_number = $serialNumber
         device_type = "LAPTOP"
-        grade = "B"
+        grade = $grade
         specs = @{
             processor = $cpuName
             cpu_cores = $cpuCores
