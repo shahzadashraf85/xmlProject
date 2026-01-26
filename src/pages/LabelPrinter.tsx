@@ -159,53 +159,53 @@ export default function LabelPrinter() {
         <div className="space-y-4 print:space-y-0">
           <h2 className="text-xl font-semibold print:hidden">Preview</h2>
           <div className="flex justify-center md:justify-start">
-            {/* Label Container - 4x6 inches approx */}
-            <div className="bg-white text-black p-4 border border-gray-300 shadow-sm print:border-none print:shadow-none w-[4in] h-[6in] flex flex-col items-center justify-between box-border overflow-hidden relative">
+            {/* Label Container - 9.5cm x 4.5cm */}
+            <div className="bg-white text-black p-2 border border-gray-300 shadow-sm print:border-none print:shadow-none w-[9.5cm] h-[4.5cm] flex flex-col items-center justify-between box-border overflow-hidden relative">
 
               {/* Header/Brand */}
-              <div className="text-center w-full border-b-2 border-black pb-2 mb-2">
-                <h2 className="text-4xl font-bold uppercase tracking-wide">{formData.brand || 'BRAND'}</h2>
+              <div className="text-center w-full border-b border-black pb-1 mb-1">
+                <h2 className="text-lg font-bold uppercase tracking-wide">{formData.brand || 'BRAND'}</h2>
               </div>
 
               {/* Main Specs */}
-              <div className="flex-1 w-full flex flex-col justify-center space-y-4 text-center">
+              <div className="flex-1 w-full flex flex-col justify-center space-y-1 text-center">
                 {formData.processor && (
-                  <div className="text-3xl font-bold">{formData.processor}</div>
+                  <div className="text-sm font-bold">{formData.processor}</div>
                 )}
 
-                <div className="flex justify-center gap-6 text-2xl font-semibold">
+                <div className="flex justify-center gap-3 text-xs font-semibold">
                   {formData.ram && <span>RAM: {formData.ram}</span>}
                   {formData.ssd && <span>SSD: {formData.ssd}</span>}
                 </div>
 
                 {formData.grade && (
-                  <div className="mt-4">
-                    <span className="text-xl">Grade:</span>
-                    <span className="text-5xl font-bold ml-2">{formData.grade}</span>
+                  <div className="mt-1">
+                    <span className="text-xs">Grade:</span>
+                    <span className="text-2xl font-bold ml-1">{formData.grade}</span>
                   </div>
                 )}
               </div>
 
               {/* Comments */}
               {formData.comments && (
-                <div className="w-full text-center text-sm border-t border-black pt-2 mb-2 italic">
+                <div className="w-full text-center text-[9px] border-t border-black pt-1 mb-1 italic truncate">
                   {formData.comments}
                 </div>
               )}
 
               {/* Footer / Barcode */}
-              <div className="w-full flex flex-col items-center pt-2 border-t-2 border-black mt-auto">
+              <div className="w-full flex flex-col items-center pt-1 border-t border-black mt-auto">
                 <div className="w-full flex justify-center">
                   {formData.serialNumber ? (
                     <Barcode
                       value={formData.serialNumber}
-                      width={2}
-                      height={60}
-                      fontSize={14}
+                      width={1}
+                      height={30}
+                      fontSize={8}
                       displayValue={true}
                     />
                   ) : (
-                    <div className="h-[80px] w-full flex items-center justify-center border border-dashed border-gray-400 text-gray-400">
+                    <div className="h-[40px] w-full flex items-center justify-center border border-dashed border-gray-400 text-gray-400 text-xs">
                       Serial Number Barcode
                     </div>
                   )}
