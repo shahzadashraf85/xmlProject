@@ -106,6 +106,50 @@ try {
     Write-Host "  OS:           $osName ($osVersion)" -ForegroundColor White
     Write-Host ""
 
+    # ===== CHECK FOR DUPLICATE SERIAL NUMBER =====
+    Write-Host "Checking for existing registration..." -ForegroundColor Yellow
+    
+    try {
+        $checkHeaders = @{
+            "apikey" = $API_KEY
+            "Authorization" = "Bearer $API_KEY"
+        }
+        
+        $checkUrl = "$SUPABASE_URL/rest/v1/inventory_items?serial_number=eq.$serialNumber&select=id,brand,model,created_at"
+        $existingDevice = Invoke-RestMethod -Uri $checkUrl -Method GET -Headers $checkHeaders -ErrorAction Stop
+        
+        if ($existingDevice -and $existingDevice.Count -gt 0) {
+            Write-Host ""
+            Write-Host "========================================" -ForegroundColor Yellow
+            Write-Host "  ⚠ DEVICE ALREADY REGISTERED" -ForegroundColor Yellow
+            Write-Host "========================================" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "This device is already in the inventory system." -ForegroundColor White
+            Write-Host "Serial Number: $serialNumber" -ForegroundColor Cyan
+            Write-Host "Registered on: $($existingDevice[0].created_at)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "No duplicate entry will be created." -ForegroundColor White
+            Write-Host ""
+            
+            # Open web dashboard to show existing device
+            $openUrl = "https://xmlproject.vercel.app/inventory?search=$serialNumber&access_token=$accessToken&refresh_token=$refreshToken"
+            Write-Host "Opening existing device in web dashboard..." -ForegroundColor Yellow
+            Start-Process $openUrl
+            
+            Write-Host "Press any key to exit..." -ForegroundColor Gray
+            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+            exit 0
+        }
+        
+        Write-Host "✓ Serial number is unique. Proceeding with registration..." -ForegroundColor Green
+        Write-Host ""
+        
+    } catch {
+        Write-Host "⚠ Could not verify serial number uniqueness. Proceeding anyway..." -ForegroundColor Yellow
+        Write-Host ""
+    }
+    # ===== END DUPLICATE CHECK =====
+
     # Prepare JSON Payload
     $payload = @{
         brand = $brand
