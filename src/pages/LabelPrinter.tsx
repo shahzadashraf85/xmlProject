@@ -13,6 +13,7 @@ export default function LabelPrinter() {
   const [formData, setFormData] = useState({
     serialNumber: '',
     brand: '',
+    model: '',
     processor: '',
     ram: '',
     ssd: '',
@@ -24,6 +25,7 @@ export default function LabelPrinter() {
   useEffect(() => {
     const serialNumber = searchParams.get('serialNumber');
     const brand = searchParams.get('brand');
+    const model = searchParams.get('model');
     const processor = searchParams.get('processor');
     const ram = searchParams.get('ram');
     const ssd = searchParams.get('ssd');
@@ -34,6 +36,7 @@ export default function LabelPrinter() {
       setFormData({
         serialNumber: serialNumber || '',
         brand: brand || '',
+        model: model || '',
         processor: processor || '',
         ram: ram || '',
         ssd: ssd || '',
@@ -92,19 +95,30 @@ export default function LabelPrinter() {
                   name="brand"
                   value={formData.brand}
                   onChange={handleChange}
-                  placeholder="e.g. Dell, HP"
+                  placeholder="e.g. Dell, HP, Lenovo"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="grade">Grade</Label>
+                <Label htmlFor="model">Model</Label>
                 <Input
-                  id="grade"
-                  name="grade"
-                  value={formData.grade}
+                  id="model"
+                  name="model"
+                  value={formData.model}
                   onChange={handleChange}
-                  placeholder="e.g. A, B, C"
+                  placeholder="e.g. Latitude 5420"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="grade">Grade</Label>
+              <Input
+                id="grade"
+                name="grade"
+                value={formData.grade}
+                onChange={handleChange}
+                placeholder="e.g. A, B, C"
+              />
             </div>
 
             <div className="space-y-2">
@@ -160,56 +174,52 @@ export default function LabelPrinter() {
           <h2 className="text-xl font-semibold print:hidden">Preview</h2>
           <div className="flex justify-center md:justify-start">
             {/* Label Container - 9.5cm x 4.5cm */}
-            <div className="bg-white text-black p-2 border border-gray-300 shadow-sm print:border-none print:shadow-none w-[9.5cm] h-[4.5cm] flex flex-col items-center justify-between box-border overflow-hidden relative">
+            <div className="bg-white text-black border border-gray-300 shadow-sm print:border-none print:shadow-none w-[9.5cm] h-[4.5cm] flex flex-col justify-between box-border overflow-hidden relative p-3">
 
-              {/* Header/Brand */}
-              <div className="text-center w-full border-b border-black pb-1 mb-1">
-                <h2 className="text-lg font-bold uppercase tracking-wide">{formData.brand || 'BRAND'}</h2>
+              {/* Brand Header */}
+              <div className="text-center w-full border-b-2 border-black pb-2">
+                <h2 className="text-2xl font-bold uppercase tracking-widest" style={{ letterSpacing: '0.15em' }}>{formData.brand || 'BRAND'}</h2>
               </div>
 
-              {/* Main Specs */}
-              <div className="flex-1 w-full flex flex-col justify-center space-y-1 text-center">
-                {formData.processor && (
-                  <div className="text-sm font-bold">{formData.processor}</div>
-                )}
-
-                <div className="flex justify-center gap-3 text-xs font-semibold">
-                  {formData.ram && <span>RAM: {formData.ram}</span>}
-                  {formData.ssd && <span>SSD: {formData.ssd}</span>}
+              {/* Processor - Full width centered */}
+              <div className="text-center w-full py-1">
+                <div className="text-base font-semibold leading-tight">
+                  {formData.processor || 'Processor Info'}
                 </div>
+              </div>
 
-                {formData.grade && (
-                  <div className="mt-1">
-                    <span className="text-xs">Grade:</span>
-                    <span className="text-2xl font-bold ml-1">{formData.grade}</span>
+              {/* RAM and SSD - Side by side */}
+              <div className="flex justify-center items-center gap-6 w-full">
+                <div className="text-sm font-semibold">
+                  RAM: <span className="font-bold">{formData.ram || '0GB'}</span>
+                </div>
+                <div className="text-sm font-semibold">
+                  SSD: <span className="font-bold">{formData.ssd || '0GB'}</span>
+                </div>
+              </div>
+
+              {/* Grade - Centered with border */}
+              <div className="text-center w-full border-t-2 border-b-2 border-black py-2">
+                <span className="text-sm font-medium">Grade: </span>
+                <span className="text-4xl font-bold">{formData.grade || 'B'}</span>
+              </div>
+
+              {/* Barcode - Bottom */}
+              <div className="w-full flex justify-center items-center">
+                {formData.serialNumber ? (
+                  <Barcode
+                    value={formData.serialNumber}
+                    width={1.2}
+                    height={35}
+                    fontSize={10}
+                    displayValue={true}
+                    margin={0}
+                  />
+                ) : (
+                  <div className="h-[45px] w-full flex items-center justify-center border border-dashed border-gray-400 text-gray-400 text-xs">
+                    Serial Number Barcode
                   </div>
                 )}
-              </div>
-
-              {/* Comments */}
-              {formData.comments && (
-                <div className="w-full text-center text-[9px] border-t border-black pt-1 mb-1 italic truncate">
-                  {formData.comments}
-                </div>
-              )}
-
-              {/* Footer / Barcode */}
-              <div className="w-full flex flex-col items-center pt-1 border-t border-black mt-auto">
-                <div className="w-full flex justify-center">
-                  {formData.serialNumber ? (
-                    <Barcode
-                      value={formData.serialNumber}
-                      width={1}
-                      height={30}
-                      fontSize={8}
-                      displayValue={true}
-                    />
-                  ) : (
-                    <div className="h-[40px] w-full flex items-center justify-center border border-dashed border-gray-400 text-gray-400 text-xs">
-                      Serial Number Barcode
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>

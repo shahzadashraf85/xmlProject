@@ -144,6 +144,7 @@ export default function Inventory() {
         const params = new URLSearchParams({
             serialNumber: item.serial_number || '',
             brand: item.brand || '',
+            model: item.model || '',
             processor: item.specs?.processor || '',
             ram: item.specs?.ram_gb ? `${item.specs.ram_gb}GB` : '',
             ssd: item.specs?.storage_gb ? `${item.specs.storage_gb}GB` : '',
