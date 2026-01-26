@@ -12,6 +12,6 @@ echo.
 echo Starting PowerShell script...
 echo.
 
-REM Run PowerShell with bypass policy (no admin needed)
-REM Removed -NoExit to allow auto-shutdown to work
-powershell.exe -ExecutionPolicy Bypass -File "%~dp0windows-register.ps1"
+REM Run PowerShell without triggering SmartScreen warnings
+REM Using -Command instead of -File to avoid security warnings
+powershell.exe -Command "& '%~dp0windows-register.ps1'"
