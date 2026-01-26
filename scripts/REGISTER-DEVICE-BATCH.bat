@@ -159,7 +159,42 @@ echo   Status:       %BATTERY_STATUS%
 echo   Health:       %BATTERY_HEALTH%
 echo   Cycles:       %BATTERY_CYCLES%
 echo ========================================
+echo ========================================
 echo.
+
+:: ===== CHECK FOR DUPLICATE SERIAL NUMBER =====
+echo Checking for existing registration...
+echo.
+
+set DUPFILE=%TEMP%\\laptek_dup.txt
+curl -s --insecure "https://xqsatwytjzvlhdmckfsb.supabase.co/rest/v1/inventory_items?serial_number=eq.%SERIAL%&select=id,brand,model,created_at" ^
+  -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
+  -H "Authorization: Bearer sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" > "%DUPFILE%"
+
+:: Check if response contains data (not empty array [])
+findstr /C:"\"id\"" "%DUPFILE%" >nul
+if not errorlevel 1 (
+    echo.
+    echo ========================================
+    echo   DEVICE ALREADY REGISTERED
+    echo ========================================
+    echo.
+    echo This device is already in the inventory system.
+    echo Serial Number: %SERIAL%
+    echo.
+    echo No duplicate entry will be created.
+    echo.
+    echo Shutting down PC in 10 seconds...
+    echo Press Ctrl+C to cancel shutdown.
+    shutdown /s /t 10 /c "Laptop already registered - Auto shutdown"
+    timeout /t 11 >nul
+    exit /b 0
+)
+
+echo Serial number is unique. Proceeding with registration...
+echo.
+del "%DUPFILE%" 2>nul
+:: ===== END DUPLICATE CHECK =====
 
 echo.
 echo ========================================
