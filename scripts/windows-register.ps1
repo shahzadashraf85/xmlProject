@@ -134,8 +134,8 @@ try {
             # Shutdown the PC
             Write-Host "Shutting down PC in 10 seconds..." -ForegroundColor Yellow
             Write-Host "Press Ctrl+C to cancel shutdown." -ForegroundColor Gray
-            Start-Sleep -Seconds 10
-            Stop-Computer -Force
+            shutdown /s /t 10 /c "Laptop already registered - Auto shutdown"
+            Start-Sleep -Seconds 11
             exit 0
         }
         
@@ -208,8 +208,8 @@ try {
     # Shutdown the PC
     Write-Host "Shutting down PC in 10 seconds..." -ForegroundColor Yellow
     Write-Host "Press Ctrl+C to cancel shutdown." -ForegroundColor Gray
-    Start-Sleep -Seconds 10
-    Stop-Computer -Force
+    shutdown /s /t 10 /c "Laptop registration complete - Auto shutdown"
+    Start-Sleep -Seconds 11
 
 } catch {
     Write-Host ""
