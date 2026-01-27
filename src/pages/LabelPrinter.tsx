@@ -238,65 +238,65 @@ export default function LabelPrinter() {
                 }}
               >
 
-                {/* header: Brand & Model Number */}
-                <div className="flex justify-between items-start w-full mb-1" style={{ height: '0.8cm' }}>
-                  <div className="uppercase font-medium tracking-wide" style={{ fontSize: '10pt', color: '#333' }}>
+                {/* header: Brand & Model Number - Reduced height */}
+                <div className="flex justify-between items-start w-full mb-0.5" style={{ height: '0.7cm', borderBottom: '1px solid black' }}>
+                  <div className="uppercase font-medium tracking-wide" style={{ fontSize: '9pt', color: '#333' }}>
                     {formData.brand || 'BRAND'}
                   </div>
-                  <div className="font-semibold text-right" style={{ fontSize: '12pt', color: '#000' }}>
+                  <div className="font-semibold text-right" style={{ fontSize: '10pt', color: '#000' }}>
                     {formData.model || 'MODEL'}
                   </div>
                 </div>
 
-                {/* Main Specs Grid - Clean, light weights */}
-                <div className="flex-grow flex flex-col justify-center space-y-0.5 w-full border-t border-b border-gray-200 py-1 my-0.5">
-                  <div className="text-center w-full" style={{ fontSize: '10pt', fontWeight: 500 }}>
+                {/* Main Specs Grid - Compress vertical space */}
+                <div className="flex-grow flex flex-col justify-center space-y-0.5 w-full py-0.5">
+                  <div className="text-center w-full" style={{ fontSize: '9pt', fontWeight: 600, lineHeight: 1.1 }}>
                     {formData.processor || 'Processor'}
                   </div>
 
-                  <div className="flex justify-center gap-6 w-full text-center" style={{ fontSize: '9pt' }}>
+                  <div className="flex justify-center gap-4 w-full text-center" style={{ fontSize: '8pt', lineHeight: 1.1 }}>
                     <div>
-                      <span className="text-gray-500 text-[7pt] uppercase mr-1">RAM</span>
+                      <span className="text-gray-500 text-[6pt] uppercase mr-1">RAM</span>
                       <span className="font-medium">{formData.ram || '-'}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-[7pt] uppercase mr-1">SSD</span>
+                      <span className="text-gray-500 text-[6pt] uppercase mr-1">SSD</span>
                       <span className="font-medium">{formData.ssd || '-'}</span>
                     </div>
                   </div>
 
-                  {/* Comment Section - Small, truncated, italic */}
+                  {/* Comment Section - ultra compact */}
                   {formData.comments && (
-                    <div className="w-full text-center truncate italic text-gray-600 px-1" style={{ fontSize: '7pt', lineHeight: '1.1' }}>
+                    <div className="w-full text-center truncate italic text-gray-600 px-1 mt-0.5" style={{ fontSize: '7pt', lineHeight: '1.0' }}>
                       "{formData.comments}"
                     </div>
                   )}
                 </div>
 
-                {/* Footer: Grade & Barcode */}
-                <div className="flex items-center justify-between w-full mt-1" style={{ height: '1.4cm' }}>
+                {/* Footer: Grade & Barcode - Reduced height */}
+                <div className="flex items-center justify-between w-full mt-0.5" style={{ height: '1.2cm' }}>
 
-                  {/* Grade - Circle/Square design instead of heavy border */}
-                  <div className="flex flex-col items-center justify-center mr-2">
-                    <span className="text-[7pt] text-gray-400 uppercase">Grade</span>
-                    <span className="text-2xl font-bold leading-none">{formData.grade || 'B'}</span>
+                  {/* Grade - Smaller */}
+                  <div className="flex flex-col items-center justify-center mr-1 min-w-[25px]">
+                    <span className="text-[6pt] text-gray-400 uppercase leading-none">GR</span>
+                    <span className="text-xl font-bold leading-none">{formData.grade || 'B'}</span>
                   </div>
 
-                  {/* Barcode - Wider and clearer */}
+                  {/* Barcode - Adjusted height */}
                   <div className="flex-grow flex justify-end items-center overflow-hidden">
                     {formData.serialNumber ? (
                       <Barcode
                         value={formData.serialNumber}
-                        width={1.8} /* Thicker bars for readability */
-                        height={35}
-                        fontSize={11}
+                        width={1.6}
+                        height={30}
+                        fontSize={9}
                         displayValue={true}
                         margin={0}
-                        textMargin={2}
+                        textMargin={0}
                         background="transparent"
                       />
                     ) : (
-                      <div className="text-[9pt] text-gray-300 italic">Scan Serial Number</div>
+                      <div className="text-[8pt] text-gray-300 italic">Scan Serial</div>
                     )}
                   </div>
                 </div>
