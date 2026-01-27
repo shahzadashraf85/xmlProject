@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
@@ -25,7 +24,6 @@ export default function Inventory() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterGrade, setFilterGrade] = useState('all');
     const [isEditing, setIsEditing] = useState(false);
-    const navigate = useNavigate();
 
     // Edit Form State
     const [editForm, setEditForm] = useState<Partial<InventoryItem>>({});
