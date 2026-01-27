@@ -271,7 +271,7 @@ export default function LabelPrinter() {
                     </div>
                     {/* Touch Badge - Only if isTouch is true */}
                     {formData.isTouch && (
-                      <div className="bg-black text-white px-1 rounded-[2px] font-bold tracking-wider mt-0.5 leading-none" style={{ fontSize: '6pt' }}>
+                      <div className="border border-black text-black px-1 rounded-[2px] font-black tracking-wider mt-0.5 leading-none text-center" style={{ fontSize: '7pt' }}>
                         TOUCH
                       </div>
                     )}
