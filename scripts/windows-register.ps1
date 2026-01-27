@@ -6,6 +6,31 @@ Write-Host "  LapTek Device Auto-Registration" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# ===== INTERNET CONNECTIVITY CHECK =====
+Write-Host "Checking internet connection..." -ForegroundColor Gray
+if (-not (Test-Connection -ComputerName 8.8.8.8 -Count 1 -Quiet)) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "  NO INTERNET CONNECTION" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Cannot connect to the internet." -ForegroundColor White
+    Write-Host "Registration requires internet access." -ForegroundColor White
+    Write-Host ""
+    
+    $shutdownChoice = Read-Host "Shutdown PC anyway? (Y/N)"
+    if ($shutdownChoice -eq "Y") {
+        shutdown /s /t 0 /c "No internet - Manual shutdown"
+    }
+    
+    Write-Host "Exiting without shutdown." -ForegroundColor Yellow
+    Write-Host "Press any key to exit..." -ForegroundColor Gray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
+Write-Host "✓ Internet connection OK." -ForegroundColor Green
+Write-Host ""
+
 # Configuration
 $SUPABASE_URL = "https://xqsatwytjzvlhdmckfsb.supabase.co"
 $API_URL = "$SUPABASE_URL/functions/v1/register-device"
@@ -38,7 +63,7 @@ try {
 
     $authResponse = Invoke-RestMethod -Uri "$SUPABASE_URL/auth/v1/token?grant_type=password" -Method POST -Headers $authHeaders -Body $authPayload -ErrorAction Stop
     $accessToken = $authResponse.access_token
-    $refreshToken = $authResponse.refresh_token
+    # $refreshToken = $authResponse.refresh_token
 
     if (-not $accessToken) {
         throw "No access token received."
@@ -131,9 +156,12 @@ try {
             Write-Host "No duplicate entry will be created." -ForegroundColor White
             Write-Host ""
             
-            # Shutdown the PC immediately
-            Write-Host "Shutting down PC now..." -ForegroundColor Yellow
-            shutdown /s /t 0 /c "Laptop already registered - Auto shutdown"
+            # Ask for shutdown confirmation implicitly via duplicates
+            $shutdownDup = Read-Host "Shutdown PC now? (Y/N)"
+            if ($shutdownDup -eq "Y") {
+                Write-Host "Shutting down PC now..." -ForegroundColor Yellow
+                shutdown /s /t 0 /c "Laptop already registered - Auto shutdown"
+            }
             exit 0
         }
         
@@ -141,8 +169,22 @@ try {
         Write-Host ""
         
     } catch {
-        Write-Host "⚠ Could not verify serial number uniqueness. Proceeding anyway..." -ForegroundColor Yellow
         Write-Host ""
+        Write-Host "========================================" -ForegroundColor Red
+        Write-Host "  SERVER CONNECTION ERROR" -ForegroundColor Red
+        Write-Host "========================================" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Could not connect to the LapTek server to verify serial number." -ForegroundColor White
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Registration stopped to avoid duplicate entries." -ForegroundColor Yellow
+        Write-Host ""
+        
+        $shutdownErr = Read-Host "Shutdown PC anyway? (Y/N)"
+        if ($shutdownErr -eq "Y") {
+            shutdown /s /t 0 /c "Registration error - Manual shutdown"
+        }
+        exit 1
     }
     # ===== END DUPLICATE CHECK =====
 
@@ -203,9 +245,14 @@ try {
     Write-Host "Serial Number: $serialNumber" -ForegroundColor Cyan
     Write-Host ""
 
-    # Shutdown the PC immediately
-    Write-Host "Shutting down PC now..." -ForegroundColor Yellow
-    shutdown /s /t 0 /c "Laptop registration complete - Auto shutdown"
+    # Shutdown Prompt (Default Y)
+    $shutdownChoice = Read-Host "Shutdown PC now? (Y/N) [Default: Y]"
+    if ([string]::IsNullOrWhiteSpace($shutdownChoice)) { $shutdownChoice = "Y" }
+    
+    if ($shutdownChoice.ToUpper() -eq "Y") {
+        Write-Host "Shutting down PC now..." -ForegroundColor Yellow
+        shutdown /s /t 0 /c "Laptop registration complete - Auto shutdown"
+    }
 
 } catch {
     Write-Host ""
@@ -215,11 +262,13 @@ try {
     Write-Host ""
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Please check:" -ForegroundColor Yellow
-    Write-Host "  1. Internet connection is active" -ForegroundColor White
-    Write-Host "  2. You have valid credentials" -ForegroundColor White
-    Write-Host "  3. This device isn't already registered" -ForegroundColor White
+    Write-Host "DATA WAS NOT SAVED!" -ForegroundColor Yellow
     Write-Host ""
+
+    $shutdownFail = Read-Host "Shutdown PC anyway? (Y/N)"
+    if ($shutdownFail -eq "Y") {
+        shutdown /s /t 0 /c "Registration failed - Manual shutdown"
+    }
 }
 
 Write-Host "Press any key to exit..." -ForegroundColor Gray
