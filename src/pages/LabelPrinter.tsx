@@ -26,7 +26,7 @@ export default function LabelPrinter() {
     if (searchParams.get('autoprint') === 'true') {
       const timer = setTimeout(() => {
         window.print();
-      }, 800); // 800ms delay to ensure barcode render
+      }, 1500); // Increased delay to 1.5s to ensure full render
       return () => clearTimeout(timer);
     }
   }, [searchParams]);
