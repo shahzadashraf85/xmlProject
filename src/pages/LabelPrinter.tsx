@@ -78,34 +78,42 @@ export default function LabelPrinter() {
         }
         
         @media print {
-          /* Hide everything by default */
-          body > * {
-            display: none !important;
+          /* Hide everything using visibility (allows children to override) */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 9.5cm !important;
+            height: 4.5cm !important;
+            overflow: hidden !important;
+            background: white !important;
           }
-
-          /* Only show the label container */
-          /* We move it to the top-left of the page */
+          
+          /* Hide all body content */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          /* Show ONLY the label container and its children */
+          .label-container,
+          .label-container * {
+            visibility: visible !important;
+          }
+          
+          /* Position label at top-left corner */
           .label-container {
-            display: flex !important;
-            position: fixed !important;
+            position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             width: 9.4cm !important;
             height: 4.4cm !important;
-            z-index: 9999 !important;
-            background: white !important;
             padding: 2mm !important;
             margin: 0 !important;
-            
-            /* Ensure text is black */
+            background: white !important;
             color: black !important;
+            display: flex !important;
+            flex-direction: column !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-          
-          /* Show children of label container */
-          .label-container * {
-            visibility: visible !important;
           }
         }
       `}</style>
