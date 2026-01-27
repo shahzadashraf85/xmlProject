@@ -78,35 +78,34 @@ export default function LabelPrinter() {
         }
         
         @media print {
-          * {
+          /* Hide everything by default */
+          body > * {
+            display: none !important;
+          }
+
+          /* Only show the label container */
+          /* We move it to the top-left of the page */
+          .label-container {
+            display: flex !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 9.4cm !important;
+            height: 4.4cm !important;
+            z-index: 9999 !important;
+            background: white !important;
+            padding: 2mm !important;
+            margin: 0 !important;
+            
+            /* Ensure text is black */
+            color: black !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 9.5cm !important;
-            height: 4.5cm !important;
-            overflow: hidden !important;
-          }
-          
-          /* Strict overflow control to prevent 2nd page */
-          body > *:not(.label-container) {
-            display: none !important;
-          }
-          
-          .label-container {
-            position: fixed;
-            left: 0;
-            top: 0;
-            width: 9.4cm !important; /* Slightly smaller to prevent overflow */
-            height: 4.4cm !important;
-            margin: 0 !important;
-            padding: 2mm !important;
-            box-shadow: none !important;
-            background: white !important;
-            z-index: 9999;
+          /* Show children of label container */
+          .label-container * {
+            visibility: visible !important;
           }
         }
       `}</style>
@@ -226,15 +225,12 @@ export default function LabelPrinter() {
             <h2 className="text-xl font-semibold print:hidden">Preview</h2>
             <div className="flex justify-center md:justify-start print:block">
               {/* Label Container - 9.4cm x 4.4cm (Safer size) */}
+              {/* moved style logic to @media print for reliability */}
               <div
                 className="label-container bg-white text-black border border-gray-300 shadow-sm print:border-none print:shadow-none box-border overflow-hidden relative"
                 style={{
-                  width: '9.4cm',
-                  height: '4.4cm',
-                  padding: '2mm',
-                  display: 'flex',
-                  flexDirection: 'column',
                   fontFamily: 'Inter, sans-serif'
+                  /* Dimensions handled by @media print */
                 }}
               >
 
