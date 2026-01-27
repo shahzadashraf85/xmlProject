@@ -18,7 +18,8 @@ export default function LabelPrinter() {
     ram: '',
     ssd: '',
     grade: '',
-    comments: ''
+    comments: '',
+    isTouch: false
   });
 
   // Auto-print if launched from Inventory
@@ -36,6 +37,10 @@ export default function LabelPrinter() {
     const serialNumber = searchParams.get('serialNumber');
     const brand = searchParams.get('brand');
     const model = searchParams.get('model');
+    // Check various fields for "Touch" keyword
+    const isTouch = [model, searchParams.get('comments'), searchParams.get('display')].some(
+      s => s?.toLowerCase().includes('touch')
+    );
     const processor = searchParams.get('processor');
     const ram = searchParams.get('ram');
     const ssd = searchParams.get('ssd');
@@ -51,16 +56,17 @@ export default function LabelPrinter() {
         ram: ram || '',
         ssd: ssd || '',
         grade: grade || '',
-        comments: comments || ''
+        comments: comments || '',
+        isTouch: isTouch || false
       });
     }
   }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
   };
 
@@ -169,6 +175,18 @@ export default function LabelPrinter() {
                 </div>
               </div>
 
+              <div className="flex items-center space-x-2 border p-2 rounded bg-gray-50">
+                <input
+                  type="checkbox"
+                  id="isTouch"
+                  name="isTouch"
+                  checked={formData.isTouch}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <Label htmlFor="isTouch" className="cursor-pointer font-semibold">Touchscreen Display</Label>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
                 <Input
@@ -243,12 +261,20 @@ export default function LabelPrinter() {
               >
 
                 {/* Header: Brand (Left) & Model (Right) - Larger Text */}
-                <div className="flex justify-between items-end w-full mb-0.5 pb-0.5 border-b border-gray-400" style={{ height: '0.8cm' }}>
-                  <div className="uppercase font-bold tracking-wider text-gray-800" style={{ fontSize: '11pt', fontFamily: 'system-ui' }}>
+                <div className="flex justify-between items-start w-full mb-0.5 pb-0.5 border-b border-gray-400" style={{ height: '0.9cm' }}>
+                  <div className="uppercase font-bold tracking-wider text-gray-800 self-end" style={{ fontSize: '11pt', fontFamily: 'system-ui' }}>
                     {formData.brand || 'BRAND'}
                   </div>
-                  <div className="font-semibold text-black" style={{ fontSize: '11pt', fontFamily: 'monospace' }}>
-                    {formData.model || 'MODEL'}
+                  <div className="flex flex-col items-end">
+                    <div className="font-semibold text-black leading-none" style={{ fontSize: '11pt', fontFamily: 'monospace' }}>
+                      {formData.model || 'MODEL'}
+                    </div>
+                    {/* Touch Badge - Only if isTouch is true */}
+                    {formData.isTouch && (
+                      <div className="bg-black text-white px-1 rounded-[2px] font-bold tracking-wider mt-0.5 leading-none" style={{ fontSize: '6pt' }}>
+                        TOUCH
+                      </div>
+                    )}
                   </div>
                 </div>
 
