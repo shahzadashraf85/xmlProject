@@ -242,48 +242,48 @@ export default function LabelPrinter() {
                 }}
               >
 
-                {/* Header: Brand (Left) & Model (Right) - Clean Separation */}
-                <div className="flex justify-between items-end w-full mb-1 pb-1 border-b border-gray-400" style={{ height: '0.8cm' }}>
-                  <div className="uppercase font-bold tracking-wider text-gray-800" style={{ fontSize: '10pt', fontFamily: 'system-ui' }}>
+                {/* Header: Brand (Left) & Model (Right) - Larger Text */}
+                <div className="flex justify-between items-end w-full mb-0.5 pb-0.5 border-b border-gray-400" style={{ height: '0.8cm' }}>
+                  <div className="uppercase font-bold tracking-wider text-gray-800" style={{ fontSize: '11pt', fontFamily: 'system-ui' }}>
                     {formData.brand || 'BRAND'}
                   </div>
-                  <div className="font-semibold text-black" style={{ fontSize: '10pt', fontFamily: 'monospace' }}>
+                  <div className="font-semibold text-black" style={{ fontSize: '11pt', fontFamily: 'monospace' }}>
                     {formData.model || 'MODEL'}
                   </div>
                 </div>
 
-                {/* Main Specs - Modern Grid Layout */}
-                <div className="flex-grow flex flex-col justify-center w-full py-0.5 space-y-1">
+                {/* Main Specs - Larger Text */}
+                <div className="flex-grow flex flex-col justify-center w-full py-0.5 space-y-0.5">
                   {/* Processor - Highlighted Pill */}
                   <div className="w-full flex justify-center">
-                    <span className="px-2 py-0.5 rounded border border-gray-300 font-semibold text-black" style={{ fontSize: '9pt', background: '#f9fafb' }}>
+                    <span className="px-2 py-0.5 rounded border border-gray-300 font-semibold text-black" style={{ fontSize: '10pt', background: '#f9fafb', lineHeight: 1.1 }}>
                       {formData.processor || 'Processor'}
                     </span>
                   </div>
 
                   {/* RAM & SSD - Clean Text */}
-                  <div className="flex justify-center gap-6 w-full text-center items-center" style={{ fontSize: '9pt' }}>
+                  <div className="flex justify-center gap-6 w-full text-center items-center mt-1" style={{ fontSize: '10pt' }}>
                     <div className="flex items-center gap-1">
-                      <span className="text-[7pt] font-bold text-gray-500 uppercase tracking-wide">RAM</span>
+                      <span className="text-[8pt] font-bold text-gray-500 uppercase tracking-wide">RAM</span>
                       <span className="font-medium text-black">{formData.ram || '-'}</span>
                     </div>
                     <div className="h-3 w-px bg-gray-300"></div> {/* Divider */}
                     <div className="flex items-center gap-1">
-                      <span className="text-[7pt] font-bold text-gray-500 uppercase tracking-wide">SSD</span>
+                      <span className="text-[8pt] font-bold text-gray-500 uppercase tracking-wide">SSD</span>
                       <span className="font-medium text-black">{formData.ssd || '-'}</span>
                     </div>
                   </div>
 
                   {/* Comment - Elegant Italic */}
                   {formData.comments && (
-                    <div className="w-full text-center truncate italic text-gray-500 px-1 mt-0.5" style={{ fontSize: '7pt', fontFamily: 'serif' }}>
+                    <div className="w-full text-center truncate italic text-gray-500 px-1 mt-0.5" style={{ fontSize: '8pt', fontFamily: 'serif' }}>
                       "{formData.comments}"
                     </div>
                   )}
                 </div>
 
                 {/* Footer: Grade Badge & Barcode */}
-                <div className="flex items-center justify-between w-full mt-0.5 pt-1 border-t border-gray-200" style={{ height: '1.3cm' }}>
+                <div className="flex items-center justify-between w-full mt-0 pt-0.5 border-t border-gray-200" style={{ height: '1.3cm' }}>
 
                   {/* Grade Badge - Circular/Stamp Style */}
                   <div className="flex items-center justify-center mr-2 border-2 border-black rounded-md w-[28px] h-[28px]">
@@ -295,9 +295,9 @@ export default function LabelPrinter() {
                     {formData.serialNumber ? (
                       <Barcode
                         value={formData.serialNumber}
-                        width={1.6}
+                        width={1.7}
                         height={28}
-                        fontSize={9}
+                        fontSize={10}
                         displayValue={true}
                         margin={0}
                         textMargin={1}
