@@ -242,65 +242,71 @@ export default function LabelPrinter() {
                 }}
               >
 
-                {/* header: Brand & Model Number - Reduced height */}
-                <div className="flex justify-between items-start w-full mb-0.5" style={{ height: '0.7cm', borderBottom: '1px solid black' }}>
-                  <div className="uppercase font-medium tracking-wide" style={{ fontSize: '9pt', color: '#333' }}>
+                {/* Header: Brand (Left) & Model (Right) - Clean Separation */}
+                <div className="flex justify-between items-end w-full mb-1 pb-1 border-b border-gray-400" style={{ height: '0.8cm' }}>
+                  <div className="uppercase font-bold tracking-wider text-gray-800" style={{ fontSize: '10pt', fontFamily: 'system-ui' }}>
                     {formData.brand || 'BRAND'}
                   </div>
-                  <div className="font-semibold text-right" style={{ fontSize: '10pt', color: '#000' }}>
+                  <div className="font-semibold text-black" style={{ fontSize: '10pt', fontFamily: 'monospace' }}>
                     {formData.model || 'MODEL'}
                   </div>
                 </div>
 
-                {/* Main Specs Grid - Compress vertical space */}
-                <div className="flex-grow flex flex-col justify-center space-y-0.5 w-full py-0.5">
-                  <div className="text-center w-full" style={{ fontSize: '9pt', fontWeight: 600, lineHeight: 1.1 }}>
-                    {formData.processor || 'Processor'}
+                {/* Main Specs - Modern Grid Layout */}
+                <div className="flex-grow flex flex-col justify-center w-full py-0.5 space-y-1">
+                  {/* Processor - Highlighted Pill */}
+                  <div className="w-full flex justify-center">
+                    <span className="px-2 py-0.5 rounded border border-gray-300 font-semibold text-black" style={{ fontSize: '9pt', background: '#f9fafb' }}>
+                      {formData.processor || 'Processor'}
+                    </span>
                   </div>
 
-                  <div className="flex justify-center gap-4 w-full text-center" style={{ fontSize: '8pt', lineHeight: 1.1 }}>
-                    <div>
-                      <span className="text-gray-500 text-[6pt] uppercase mr-1">RAM</span>
-                      <span className="font-medium">{formData.ram || '-'}</span>
+                  {/* RAM & SSD - Clean Text */}
+                  <div className="flex justify-center gap-6 w-full text-center items-center" style={{ fontSize: '9pt' }}>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[7pt] font-bold text-gray-500 uppercase tracking-wide">RAM</span>
+                      <span className="font-medium text-black">{formData.ram || '-'}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-500 text-[6pt] uppercase mr-1">SSD</span>
-                      <span className="font-medium">{formData.ssd || '-'}</span>
+                    <div className="h-3 w-px bg-gray-300"></div> {/* Divider */}
+                    <div className="flex items-center gap-1">
+                      <span className="text-[7pt] font-bold text-gray-500 uppercase tracking-wide">SSD</span>
+                      <span className="font-medium text-black">{formData.ssd || '-'}</span>
                     </div>
                   </div>
 
-                  {/* Comment Section - ultra compact */}
+                  {/* Comment - Elegant Italic */}
                   {formData.comments && (
-                    <div className="w-full text-center truncate italic text-gray-600 px-1 mt-0.5" style={{ fontSize: '7pt', lineHeight: '1.0' }}>
+                    <div className="w-full text-center truncate italic text-gray-500 px-1 mt-0.5" style={{ fontSize: '7pt', fontFamily: 'serif' }}>
                       "{formData.comments}"
                     </div>
                   )}
                 </div>
 
-                {/* Footer: Grade & Barcode - Reduced height */}
-                <div className="flex items-center justify-between w-full mt-0.5" style={{ height: '1.2cm' }}>
+                {/* Footer: Grade Badge & Barcode */}
+                <div className="flex items-center justify-between w-full mt-0.5 pt-1 border-t border-gray-200" style={{ height: '1.3cm' }}>
 
-                  {/* Grade - Smaller */}
-                  <div className="flex flex-col items-center justify-center mr-1 min-w-[25px]">
-                    <span className="text-[6pt] text-gray-400 uppercase leading-none">GR</span>
-                    <span className="text-xl font-bold leading-none">{formData.grade || 'B'}</span>
+                  {/* Grade Badge - Circular/Stamp Style */}
+                  <div className="flex items-center justify-center mr-2 border-2 border-black rounded-md w-[28px] h-[28px]">
+                    <span className="text-xl font-black leading-none">{formData.grade || 'B'}</span>
                   </div>
 
-                  {/* Barcode - Adjusted height */}
+                  {/* Barcode - Clean & Sharp */}
                   <div className="flex-grow flex justify-end items-center overflow-hidden">
                     {formData.serialNumber ? (
                       <Barcode
                         value={formData.serialNumber}
                         width={1.6}
-                        height={30}
+                        height={28}
                         fontSize={9}
                         displayValue={true}
                         margin={0}
-                        textMargin={0}
+                        textMargin={1}
                         background="transparent"
+                        fontOptions="bold"
+                        textAlign="right"
                       />
                     ) : (
-                      <div className="text-[8pt] text-gray-300 italic">Scan Serial</div>
+                      <div className="text-[8pt] text-gray-300 uppercase tracking-widest">NO SERIAL</div>
                     )}
                   </div>
                 </div>
