@@ -141,11 +141,8 @@ export default function Inventory() {
     }
 
     function handlePrintLabel(item: InventoryItem) {
-        // Check if model or comments contain "touch" (case-insensitive)
-        const isTouch = [item.model, item.comments].some(
-            s => s?.toLowerCase().includes('touch')
-        );
-
+        // Use the actual database field for touch screen
+        const isTouch = item.specs?.is_touch_screen === true;
         const params = new URLSearchParams({
             serialNumber: item.serial_number || '',
             brand: item.brand || '',
