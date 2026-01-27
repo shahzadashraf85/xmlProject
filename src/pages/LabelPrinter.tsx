@@ -217,52 +217,70 @@ export default function LabelPrinter() {
             <h2 className="text-xl font-semibold print:hidden">Preview</h2>
             <div className="flex justify-center md:justify-start print:block">
               {/* Label Container - 9.5cm x 4.5cm */}
-              <div className="label-container bg-white text-black border border-gray-300 shadow-sm print:border-none print:shadow-none w-[9.5cm] h-[4.5cm] flex flex-col justify-between box-border overflow-hidden p-3">
+              {/* Using inline styles for exact print measurements */}
+              <div
+                className="label-container bg-white text-black border border-gray-300 shadow-sm print:border-none print:shadow-none box-border overflow-hidden relative"
+                style={{
+                  width: '9.5cm',
+                  height: '4.5cm',
+                  padding: '2mm',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+              >
 
-                {/* Brand Header */}
-                <div className="text-center w-full border-b-2 border-black pb-2">
-                  <h2 className="text-2xl font-bold uppercase tracking-widest" style={{ letterSpacing: '0.15em' }}>{formData.brand || 'BRAND'}</h2>
-                </div>
-
-                {/* Processor - Full width centered */}
-                <div className="text-center w-full py-1">
-                  <div className="text-base font-semibold leading-tight">
-                    {formData.processor || 'Processor Info'}
+                {/* Top Row: Brand & Model */}
+                <div className="w-full flex justify-between items-end border-b-2 border-black pb-1 mb-1" style={{ height: '1.0cm' }}>
+                  <div className="font-bold uppercase leading-none overflow-hidden whitespace-nowrap" style={{ fontSize: '16pt', maxWidth: '65%' }}>
+                    {formData.brand || 'BRAND'}
+                  </div>
+                  <div className="font-semibold leading-none overflow-hidden whitespace-nowrap text-right" style={{ fontSize: '10pt', maxWidth: '35%' }}>
+                    {formData.model || 'MODEL'}
                   </div>
                 </div>
 
-                {/* RAM and SSD - Side by side */}
-                <div className="flex justify-center items-center gap-6 w-full">
-                  <div className="text-sm font-semibold">
-                    RAM: <span className="font-bold">{formData.ram || '0GB'}</span>
+                {/* Middle Row: Specs */}
+                <div className="w-full flex-grow flex flex-col justify-center space-y-1">
+                  {/* Processor - Highlighted */}
+                  <div className="text-center font-bold leading-tight w-full truncate" style={{ fontSize: '12pt' }}>
+                    {formData.processor || 'Processor'}
                   </div>
-                  <div className="text-sm font-semibold">
-                    SSD: <span className="font-bold">{formData.ssd || '0GB'}</span>
+
+                  {/* RAM & SSD */}
+                  <div className="flex justify-center gap-4 w-full" style={{ fontSize: '11pt' }}>
+                    <div className="font-semibold"><span className="font-normal text-gray-800 text-[9pt]">RAM:</span> {formData.ram || '-'}</div>
+                    <div className="font-semibold"><span className="font-normal text-gray-800 text-[9pt]">SSD:</span> {formData.ssd || '-'}</div>
                   </div>
                 </div>
 
-                {/* Grade - Centered with border */}
-                <div className="text-center w-full border-t-2 border-b-2 border-black py-2">
-                  <span className="text-sm font-medium">Grade: </span>
-                  <span className="text-4xl font-bold">{formData.grade || 'B'}</span>
-                </div>
+                {/* Bottom Section: Grade & Barcode */}
+                <div className="w-full flex items-center justify-between mt-1" style={{ height: '1.4cm' }}>
 
-                {/* Barcode - Bottom */}
-                <div className="w-full flex justify-center items-center">
-                  {formData.serialNumber ? (
-                    <Barcode
-                      value={formData.serialNumber}
-                      width={1.2}
-                      height={35}
-                      fontSize={10}
-                      displayValue={true}
-                      margin={0}
-                    />
-                  ) : (
-                    <div className="h-[45px] w-full flex items-center justify-center border border-dashed border-gray-400 text-gray-400 text-xs">
-                      Serial Number Barcode
-                    </div>
-                  )}
+                  {/* Grade Box - Left */}
+                  <div className="flex flex-col items-center justify-center border-2 border-black rounded px-2" style={{ width: '2rem', height: '100%', marginRight: '2mm' }}>
+                    <span className="font-bold leading-none" style={{ fontSize: '8pt' }}>GR</span>
+                    <span className="font-black leading-none" style={{ fontSize: '24pt' }}>{formData.grade || 'B'}</span>
+                  </div>
+
+                  {/* Barcode - Right (takes remaining space) */}
+                  <div className="flex-grow flex justify-center items-center h-full overflow-hidden">
+                    {formData.serialNumber ? (
+                      <Barcode
+                        value={formData.serialNumber}
+                        width={1.5}
+                        height={35}
+                        fontSize={12}
+                        displayValue={true}
+                        margin={0}
+                        textMargin={0}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center border border-dashed border-gray-300 text-[8pt] text-gray-400">
+                        Scan for Barcode
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
