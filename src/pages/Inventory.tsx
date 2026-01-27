@@ -267,7 +267,7 @@ export default function Inventory() {
             align-items: center;
         }
         .barcode svg {
-            height: 28px;
+            height: 40px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
@@ -296,14 +296,13 @@ export default function Inventory() {
     </div>
     <script>
         JsBarcode("#barcode", "${item.serial_number || 'NOSERIAL'}", {
-            width: 1.7,
-            height: 28,
-            fontSize: 10,
+            width: 2.2,
+            height: 40,
+            fontSize: 11,
             margin: 0,
-            textMargin: 1,
+            textMargin: 2,
             displayValue: true,
-            font: "monospace",
-            fontOptions: "bold"
+            font: "monospace"
         });
         // Auto print after barcode renders
         setTimeout(function() {
