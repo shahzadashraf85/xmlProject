@@ -21,6 +21,16 @@ export default function LabelPrinter() {
     comments: ''
   });
 
+  // Auto-print if launched from Inventory
+  useEffect(() => {
+    if (searchParams.get('autoprint') === 'true') {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800); // 800ms delay to ensure barcode render
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
   // Auto-populate from URL params
   useEffect(() => {
     const serialNumber = searchParams.get('serialNumber');

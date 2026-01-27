@@ -149,7 +149,8 @@ export default function Inventory() {
             ram: item.specs?.ram_gb ? `${item.specs.ram_gb}GB` : '',
             ssd: item.specs?.storage_gb ? `${item.specs.storage_gb}GB` : '',
             grade: item.grade || '',
-            comments: item.comments || ''
+            comments: item.comments || '',
+            autoprint: 'true'
         });
         navigate(`/label-printer?${params.toString()}`);
     }
