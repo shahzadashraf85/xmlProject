@@ -249,21 +249,28 @@ export default function LabelPrinter() {
                 </div>
 
                 {/* Main Specs Grid - Clean, light weights */}
-                <div className="flex-grow flex flex-col justify-center space-y-1 w-full border-t border-b border-gray-200 py-1 my-1">
-                  <div className="text-center w-full" style={{ fontSize: '11pt', fontWeight: 500 }}>
+                <div className="flex-grow flex flex-col justify-center space-y-0.5 w-full border-t border-b border-gray-200 py-1 my-0.5">
+                  <div className="text-center w-full" style={{ fontSize: '10pt', fontWeight: 500 }}>
                     {formData.processor || 'Processor'}
                   </div>
 
-                  <div className="flex justify-center gap-6 w-full text-center" style={{ fontSize: '10pt' }}>
+                  <div className="flex justify-center gap-6 w-full text-center" style={{ fontSize: '9pt' }}>
                     <div>
-                      <span className="text-gray-500 text-[8pt] uppercase mr-1">RAM</span>
+                      <span className="text-gray-500 text-[7pt] uppercase mr-1">RAM</span>
                       <span className="font-medium">{formData.ram || '-'}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 text-[8pt] uppercase mr-1">SSD</span>
+                      <span className="text-gray-500 text-[7pt] uppercase mr-1">SSD</span>
                       <span className="font-medium">{formData.ssd || '-'}</span>
                     </div>
                   </div>
+
+                  {/* Comment Section - Small, truncated, italic */}
+                  {formData.comments && (
+                    <div className="w-full text-center truncate italic text-gray-600 px-1" style={{ fontSize: '7pt', lineHeight: '1.1' }}>
+                      "{formData.comments}"
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer: Grade & Barcode */}
