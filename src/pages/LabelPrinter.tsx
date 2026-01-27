@@ -37,8 +37,9 @@ export default function LabelPrinter() {
     const serialNumber = searchParams.get('serialNumber');
     const brand = searchParams.get('brand');
     const model = searchParams.get('model');
-    // Check various fields for "Touch" keyword
-    const isTouch = [model, searchParams.get('comments'), searchParams.get('display')].some(
+    // Check various fields for "Touch" keyword OR explicit isTouch param
+    const isTouchParam = searchParams.get('isTouch') === 'true';
+    const isTouch = isTouchParam || [model, searchParams.get('comments'), searchParams.get('display')].some(
       s => s?.toLowerCase().includes('touch')
     );
     const processor = searchParams.get('processor');

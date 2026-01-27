@@ -141,6 +141,11 @@ export default function Inventory() {
     }
 
     function handlePrintLabel(item: InventoryItem) {
+        // Check if model or comments contain "touch" (case-insensitive)
+        const isTouch = [item.model, item.comments].some(
+            s => s?.toLowerCase().includes('touch')
+        );
+
         const params = new URLSearchParams({
             serialNumber: item.serial_number || '',
             brand: item.brand || '',
@@ -150,6 +155,7 @@ export default function Inventory() {
             ssd: item.specs?.storage_gb ? `${item.specs.storage_gb}GB` : '',
             grade: item.grade || '',
             comments: item.comments || '',
+            isTouch: isTouch ? 'true' : 'false',
             autoprint: 'true'
         });
         navigate(`/label-printer?${params.toString()}`);
