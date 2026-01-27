@@ -1,22 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Check for Administrator privileges
-net session >nul 2>&1
-if %errorLevel% == 0 (
-    goto :gotAdmin
-) else (
-    echo Requesting administrative privileges...
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    exit /b
-)
-
-:gotAdmin
 cd /d "%~dp0"
 
 echo ========================================
 echo   LapTek Device Auto-Registration
-echo   (Running as Administrator)
 echo ========================================
 echo.
 
@@ -184,10 +172,8 @@ if not errorlevel 1 (
     echo.
     echo No duplicate entry will be created.
     echo.
-    echo Shutting down PC in 10 seconds...
-    echo Press Ctrl+C to cancel shutdown.
-    shutdown /s /t 10 /c "Laptop already registered - Auto shutdown"
-    timeout /t 11 >nul
+    echo Shutting down PC now...
+    shutdown /s /t 0 /c "Laptop already registered - Auto shutdown"
     exit /b 0
 )
 
@@ -313,10 +299,8 @@ if not errorlevel 1 (
     echo Device has been added to inventory.
     echo Serial Number: %SERIAL%
     echo.
-    echo Shutting down PC in 10 seconds...
-    echo Press Ctrl+C to cancel shutdown.
-    shutdown /s /t 10 /c "Laptop registration complete - Auto shutdown"
-    timeout /t 11 >nul
+    echo Shutting down PC now...
+    shutdown /s /t 0 /c "Laptop registration complete - Auto shutdown"
 )
 
 :: Cleanup

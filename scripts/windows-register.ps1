@@ -131,11 +131,9 @@ try {
             Write-Host "No duplicate entry will be created." -ForegroundColor White
             Write-Host ""
             
-            # Shutdown the PC
-            Write-Host "Shutting down PC in 10 seconds..." -ForegroundColor Yellow
-            Write-Host "Press Ctrl+C to cancel shutdown." -ForegroundColor Gray
-            shutdown /s /t 10 /c "Laptop already registered - Auto shutdown"
-            Start-Sleep -Seconds 11
+            # Shutdown the PC immediately
+            Write-Host "Shutting down PC now..." -ForegroundColor Yellow
+            shutdown /s /t 0 /c "Laptop already registered - Auto shutdown"
             exit 0
         }
         
@@ -205,11 +203,9 @@ try {
     Write-Host "Serial Number: $serialNumber" -ForegroundColor Cyan
     Write-Host ""
 
-    # Shutdown the PC
-    Write-Host "Shutting down PC in 10 seconds..." -ForegroundColor Yellow
-    Write-Host "Press Ctrl+C to cancel shutdown." -ForegroundColor Gray
-    shutdown /s /t 10 /c "Laptop registration complete - Auto shutdown"
-    Start-Sleep -Seconds 11
+    # Shutdown the PC immediately
+    Write-Host "Shutting down PC now..." -ForegroundColor Yellow
+    shutdown /s /t 0 /c "Laptop registration complete - Auto shutdown"
 
 } catch {
     Write-Host ""
