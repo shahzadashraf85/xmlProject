@@ -91,23 +91,22 @@ export default function LabelPrinter() {
             overflow: hidden !important;
           }
           
-          body * {
-            visibility: hidden;
-          }
-          
-          .label-container, .label-container * {
-            visibility: visible;
+          /* Strict overflow control to prevent 2nd page */
+          body > *:not(.label-container) {
+            display: none !important;
           }
           
           .label-container {
-            position: absolute;
+            position: fixed;
             left: 0;
             top: 0;
-            width: 9.5cm !important;
-            height: 4.5cm !important;
+            width: 9.4cm !important; /* Slightly smaller to prevent overflow */
+            height: 4.4cm !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 2mm !important;
             box-shadow: none !important;
+            background: white !important;
+            z-index: 9999;
           }
         }
       `}</style>
@@ -226,69 +225,71 @@ export default function LabelPrinter() {
           <div className="space-y-4 print:space-y-0">
             <h2 className="text-xl font-semibold print:hidden">Preview</h2>
             <div className="flex justify-center md:justify-start print:block">
-              {/* Label Container - 9.5cm x 4.5cm */}
-              {/* Using inline styles for exact print measurements */}
+              {/* Label Container - 9.4cm x 4.4cm (Safer size) */}
               <div
                 className="label-container bg-white text-black border border-gray-300 shadow-sm print:border-none print:shadow-none box-border overflow-hidden relative"
                 style={{
-                  width: '9.5cm',
-                  height: '4.5cm',
+                  width: '9.4cm',
+                  height: '4.4cm',
                   padding: '2mm',
                   display: 'flex',
                   flexDirection: 'column',
-                  justifyContent: 'space-between'
+                  fontFamily: 'Inter, sans-serif'
                 }}
               >
 
-                {/* Top Row: Brand & Model */}
-                <div className="w-full flex justify-between items-end border-b-2 border-black pb-1 mb-1" style={{ height: '1.0cm' }}>
-                  <div className="font-bold uppercase leading-none overflow-hidden whitespace-nowrap" style={{ fontSize: '16pt', maxWidth: '65%' }}>
+                {/* header: Brand & Model Number */}
+                <div className="flex justify-between items-start w-full mb-1" style={{ height: '0.8cm' }}>
+                  <div className="uppercase font-medium tracking-wide" style={{ fontSize: '10pt', color: '#333' }}>
                     {formData.brand || 'BRAND'}
                   </div>
-                  <div className="font-semibold leading-none overflow-hidden whitespace-nowrap text-right" style={{ fontSize: '10pt', maxWidth: '35%' }}>
+                  <div className="font-semibold text-right" style={{ fontSize: '12pt', color: '#000' }}>
                     {formData.model || 'MODEL'}
                   </div>
                 </div>
 
-                {/* Middle Row: Specs */}
-                <div className="w-full flex-grow flex flex-col justify-center space-y-1">
-                  {/* Processor - Highlighted */}
-                  <div className="text-center font-bold leading-tight w-full truncate" style={{ fontSize: '12pt' }}>
+                {/* Main Specs Grid - Clean, light weights */}
+                <div className="flex-grow flex flex-col justify-center space-y-1 w-full border-t border-b border-gray-200 py-1 my-1">
+                  <div className="text-center w-full" style={{ fontSize: '11pt', fontWeight: 500 }}>
                     {formData.processor || 'Processor'}
                   </div>
 
-                  {/* RAM & SSD */}
-                  <div className="flex justify-center gap-4 w-full" style={{ fontSize: '11pt' }}>
-                    <div className="font-semibold"><span className="font-normal text-gray-800 text-[9pt]">RAM:</span> {formData.ram || '-'}</div>
-                    <div className="font-semibold"><span className="font-normal text-gray-800 text-[9pt]">SSD:</span> {formData.ssd || '-'}</div>
+                  <div className="flex justify-center gap-6 w-full text-center" style={{ fontSize: '10pt' }}>
+                    <div>
+                      <span className="text-gray-500 text-[8pt] uppercase mr-1">RAM</span>
+                      <span className="font-medium">{formData.ram || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 text-[8pt] uppercase mr-1">SSD</span>
+                      <span className="font-medium">{formData.ssd || '-'}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Section: Grade & Barcode */}
-                <div className="w-full flex items-center justify-between mt-1" style={{ height: '1.4cm' }}>
+                {/* Footer: Grade & Barcode */}
+                <div className="flex items-center justify-between w-full mt-1" style={{ height: '1.4cm' }}>
 
-                  {/* Grade Box - Left */}
-                  <div className="flex flex-col items-center justify-center border-2 border-black rounded px-2" style={{ width: '2rem', height: '100%', marginRight: '2mm' }}>
-                    <span className="font-bold leading-none" style={{ fontSize: '8pt' }}>GR</span>
-                    <span className="font-black leading-none" style={{ fontSize: '24pt' }}>{formData.grade || 'B'}</span>
+                  {/* Grade - Circle/Square design instead of heavy border */}
+                  <div className="flex flex-col items-center justify-center mr-2">
+                    <span className="text-[7pt] text-gray-400 uppercase">Grade</span>
+                    <span className="text-2xl font-bold leading-none">{formData.grade || 'B'}</span>
                   </div>
 
-                  {/* Barcode - Right (takes remaining space) */}
-                  <div className="flex-grow flex justify-center items-center h-full overflow-hidden">
+                  {/* Barcode - Wider and clearer */}
+                  <div className="flex-grow flex justify-end items-center overflow-hidden">
                     {formData.serialNumber ? (
                       <Barcode
                         value={formData.serialNumber}
-                        width={1.5}
+                        width={1.8} /* Thicker bars for readability */
                         height={35}
-                        fontSize={12}
+                        fontSize={11}
                         displayValue={true}
                         margin={0}
-                        textMargin={0}
+                        textMargin={2}
+                        background="transparent"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center border border-dashed border-gray-300 text-[8pt] text-gray-400">
-                        Scan for Barcode
-                      </div>
+                      <div className="text-[9pt] text-gray-300 italic">Scan Serial Number</div>
                     )}
                   </div>
                 </div>
