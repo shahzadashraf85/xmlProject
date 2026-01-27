@@ -102,15 +102,22 @@ Write-Host "Detecting hardware specifications..." -ForegroundColor Yellow
 
 try {
     # Gather System Information
-    $computerInfo = Get-ComputerInfo
+    $cs = Get-CimInstance Win32_ComputerSystem
+    $csp = Get-CimInstance Win32_ComputerSystemProduct
     $processor = Get-CimInstance Win32_Processor | Select-Object -First 1
     $disk = Get-CimInstance Win32_DiskDrive | Select-Object -First 1
     $bios = Get-CimInstance Win32_BIOS
     $os = Get-CimInstance Win32_OperatingSystem
 
     # Extract Details
-    $brand = $computerInfo.CsManufacturer
-    $model = $computerInfo.CsModel
+    $brand = $cs.Manufacturer
+    
+    # Lenovo Logic: Use Version from ComputerSystemProduct for friendly name
+    if ($brand -match "Lenovo") {
+        $model = $csp.Version
+    } else {
+        $model = $cs.Model
+    }
     $serialNumber = $bios.SerialNumber
     $cpuName = $processor.Name
     $cpuCores = $processor.NumberOfCores
