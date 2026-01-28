@@ -13,7 +13,8 @@ import {
     Menu,
     FileSpreadsheet,
     ShoppingBag,
-    Download
+    Download,
+    Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -31,18 +32,32 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         navigate('/login');
     }
 
-    const navItems = [
-        { name: 'Shipping Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-        { name: 'History', path: '/history', icon: <History size={20} /> },
-        { name: 'Inventory Manager', path: '/inventory', icon: <Package size={20} /> },
-        { name: 'Master Inventory', path: '/inventory-grid', icon: <Grid size={20} /> },
-        { name: 'Parts Management', path: '/parts', icon: <Wrench size={20} /> },
-        { name: 'Messages', path: '/messages', icon: <Mail size={20} /> },
-
-        // Best Buy Module
-        { name: 'Best Buy Templates', path: '/bestbuy/templates', icon: <FileSpreadsheet size={20} /> },
-        { name: 'Best Buy Listings', path: '/bestbuy/listings', icon: <ShoppingBag size={20} /> },
-        { name: 'Best Buy Exports', path: '/bestbuy/exports', icon: <Download size={20} /> },
+    const navSections = [
+        {
+            title: 'Shipping',
+            items: [
+                { name: 'Shipping Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
+                { name: 'History', path: '/history', icon: <History size={20} /> },
+            ]
+        },
+        {
+            title: 'Inventory',
+            items: [
+                { name: 'Inventory Manager', path: '/inventory', icon: <Package size={20} /> },
+                { name: 'Master Inventory', path: '/inventory-grid', icon: <Grid size={20} /> },
+                { name: 'Parts Management', path: '/parts', icon: <Wrench size={20} /> },
+                { name: 'Label Printer', path: '/label-printer', icon: <Printer size={20} /> },
+                { name: 'Purchase Management', path: '/purchase-management', icon: <ShoppingBag size={20} /> },
+            ]
+        },
+        {
+            title: 'Listing',
+            items: [
+                { name: 'Best Buy Templates', path: '/bestbuy/templates', icon: <FileSpreadsheet size={20} /> },
+                { name: 'Best Buy Listings', path: '/bestbuy/listings', icon: <ShoppingBag size={20} /> },
+                { name: 'Best Buy Exports', path: '/bestbuy/exports', icon: <Download size={20} /> },
+            ]
+        }
     ];
 
     return (
@@ -62,23 +77,30 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
 
                 <div className="flex-1 overflow-auto py-4">
                     <nav className="grid items-start px-4 text-sm font-medium gap-1">
-                        {navItems.map((item) => {
-                            const isActive = location.pathname === item.path;
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all
-                                    ${isActive
-                                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                                            : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'
-                                        }`}
-                                >
-                                    {item.icon}
-                                    <span>{item.name}</span>
-                                </Link>
-                            );
-                        })}
+                        {navSections.map((section) => (
+                            <React.Fragment key={section.title}>
+                                <div className="px-3 mt-4 mb-2">
+                                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{section.title}</h3>
+                                </div>
+                                {section.items.map((item) => {
+                                    const isActive = location.pathname === item.path;
+                                    return (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all
+                                            ${isActive
+                                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                                    : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'
+                                                }`}
+                                        >
+                                            {item.icon}
+                                            <span>{item.name}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </React.Fragment>
+                        ))}
                     </nav>
                 </div>
 

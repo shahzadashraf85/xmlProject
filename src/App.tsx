@@ -15,6 +15,9 @@ import BestBuyListings from './pages/bestbuy/Listings';
 import BestBuyNewListing from './pages/bestbuy/NewListing';
 import BestBuyEditListing from './pages/bestbuy/EditListing';
 import BestBuyExports from './pages/bestbuy/Exports';
+import LabelPrinter from './pages/LabelPrinter';
+import PurchaseManagement from './pages/PurchaseManagement';
+
 
 
 function App() {
@@ -155,6 +158,27 @@ function App() {
             }
           />
 
+
+          <Route
+            path="/label-printer"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <LabelPrinter />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/purchase-management"
+            element={
+              <ProtectedRoute>
+                <SidebarLayout>
+                  <PurchaseManagement />
+                </SidebarLayout>
+              </ProtectedRoute>
+            }
+          />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>

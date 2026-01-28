@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { logInventoryAction, getInventoryLogs } from '../lib/logs';
 import * as XLSX from 'xlsx';
 
 import type { InventoryItem } from '../types';
@@ -27,6 +28,7 @@ export default function Inventory() {
 
     // Edit Form State
     const [editForm, setEditForm] = useState<Partial<InventoryItem>>({});
+    const [itemLogs, setItemLogs] = useState<any[]>([]);
 
     useEffect(() => {
         loadInventory();
@@ -54,8 +56,10 @@ export default function Inventory() {
         if (selectedItem) {
             setEditForm(selectedItem);
             setIsEditing(false);
+            getInventoryLogs(selectedItem.id).then(setItemLogs);
         } else {
             setEditForm({});
+            setItemLogs([]);
         }
     }, [selectedItem]);
 
@@ -93,6 +97,8 @@ export default function Inventory() {
 
             if (error) throw error;
 
+            await logInventoryAction(selectedItem.id, 'edit_details', { changes: editForm });
+
             // Optimistic update
             setSelectedItem({ ...selectedItem, ...editForm } as InventoryItem);
             setItems(items.map(i => i.id === selectedItem.id ? { ...i, ...editForm } as InventoryItem : i));
@@ -110,6 +116,12 @@ export default function Inventory() {
                 .eq('id', id);
 
             if (error) throw error;
+
+            // Log the action matches key
+            const keys = Object.keys(updates);
+            if (keys.length > 0) {
+                await logInventoryAction(id, `update_${keys[0]}`, { updates });
+            }
 
             // Update local state immediately
             if (selectedItem && selectedItem.id === id) {
@@ -144,6 +156,7 @@ export default function Inventory() {
             item.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             specs.processor?.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
@@ -430,7 +443,22 @@ export default function Inventory() {
                                         <option value="ready_to_ship">🟢 Ready to Ship</option>
                                         <option value="shipped">🟣 Shipped</option>
                                         <option value="scrapped">⚫ Scrapped</option>
+                                        <option value="returned">↩️ Returned</option>
                                     </select>
+                                    {selectedItem.status === 'shipped' && (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            className="h-6 text-[10px] px-2 bg-purple-100 text-purple-700 hover:bg-purple-200 ml-2"
+                                            onClick={() => {
+                                                if (confirm('Initiate Return Process? This will change status to Returned.')) {
+                                                    updateField(selectedItem!.id, { status: 'returned' });
+                                                }
+                                            }}
+                                        >
+                                            Process Return
+                                        </Button>
+                                    )}
                                 </div>
 
                                 <div className="h-4 w-px bg-gray-200"></div>
@@ -601,7 +629,7 @@ export default function Inventory() {
 
                             {/* Tabs */}
                             <div className="flex border-b border-gray-100 text-sm font-medium text-gray-500">
-                                {['Basic Info', 'Hardware Specs', 'System & Network'].map((tab, i) => (
+                                {['Basic Info', 'Hardware Specs', 'System & Network', 'History', 'Additional Hardware'].map((tab, i) => (
                                     <button
                                         key={tab}
                                         onClick={() => {
@@ -804,121 +832,137 @@ export default function Inventory() {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Display</label>
-                                        <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Network</label>
                                             <input
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="Screen Size (15.6 inch...)"
-                                                value={editForm.specs?.screen_size || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_size: e.target.value } })}
-                                            />
-                                            <input
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                                placeholder="Resolution (1920x1080)"
-                                                value={editForm.specs?.screen_resolution || ''}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_resolution: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                                placeholder="MAC Address"
+                                                value={editForm.specs?.mac_address || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, mac_address: e.target.value } })}
                                             />
                                         </div>
-                                        <div className="mt-2 flex items-center gap-2">
+                                        <div className="space-y-1">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">IP / Host</label>
                                             <input
-                                                type="checkbox"
-                                                id="is_touch_screen"
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                checked={editForm.specs?.is_touch_screen || false}
-                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, is_touch_screen: e.target.checked } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                                placeholder="Computer Name"
+                                                value={editForm.specs?.computer_name || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, computer_name: e.target.value } })}
                                             />
-                                            <label htmlFor="is_touch_screen" className="text-sm text-gray-700 font-medium select-none cursor-pointer">
-                                                Touch Screen
-                                            </label>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Network Identifiers</label>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <span className="text-[10px] text-gray-400 uppercase">MAC Address</span>
-                                                <input
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"
-                                                    value={editForm.specs?.mac_address || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, mac_address: e.target.value } })}
-                                                />
+                                {/* TAB 4: HISTORY */}
+                                <div data-tab-content className="space-y-4 hidden h-full">
+                                    <h3 className="text-sm font-bold text-gray-700">Audit History</h3>
+                                    <div className="space-y-3">
+                                        {itemLogs.length > 0 ? itemLogs.map(log => (
+                                            <div key={log.id} className="flex gap-3 text-sm border-b border-gray-100 pb-2">
+                                                <div className="text-gray-400 text-xs w-24">
+                                                    {new Date(log.created_at).toLocaleDateString()}
+                                                    <br />
+                                                    {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-gray-800">{log.action.replace(/_/g, ' ')}</div>
+                                                    <div className="text-xs text-gray-500 font-mono mt-1">
+                                                        {JSON.stringify(log.details, null, 2)}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] text-gray-400 uppercase">WiFi Adapter</span>
-                                                <input
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                                    value={editForm.specs?.wifi_adapter || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, wifi_adapter: e.target.value } })}
-                                                />
-                                            </div>
-                                        </div>
+                                        )) : (
+                                            <p className="text-gray-400 italic text-sm">No history logs found.</p>
+                                        )}
                                     </div>
+                                </div>
 
-                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mt-4">
-                                        <h3 className="text-xs font-bold text-teal-600 uppercase mb-3">Power & Battery</h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Status</label>
-                                                <input
-                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                    value={editForm.specs?.battery_status || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_status: e.target.value } })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Health</label>
-                                                <input
-                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                    placeholder="e.g. 95%"
-                                                    value={editForm.specs?.battery_health || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_health: e.target.value } })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Cycle Count</label>
-                                                <input
-                                                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
-                                                    placeholder="e.g. 45"
-                                                    value={editForm.specs?.battery_cycles || ''}
-                                                    onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_cycles: e.target.value } })}
-                                                />
-                                            </div>
-                                            <div className="flex items-end">
-                                                <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={editForm.specs?.has_battery || false}
-                                                        onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, has_battery: e.target.checked } })}
-                                                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                    />
-                                                    Battery Present
-                                                </label>
-                                            </div>
+                                <div data-tab-content className="space-y-4 hidden h-full">
+                                    <h3 className="text-sm font-bold text-gray-700">Display</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <input
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="Screen Size (15.6 inch...)"
+                                            value={editForm.specs?.screen_size || ''}
+                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_size: e.target.value } })}
+                                        />
+                                        <input
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="Resolution (1920x1080)"
+                                            value={editForm.specs?.screen_resolution || ''}
+                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, screen_resolution: e.target.value } })}
+                                        />
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="is_touch_screen"
+                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            checked={editForm.specs?.is_touch_screen || false}
+                                            onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, is_touch_screen: e.target.checked } })}
+                                        />
+                                        <label htmlFor="is_touch_screen" className="text-sm text-gray-700 font-medium select-none cursor-pointer">
+                                            Touch Screen
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mt-4">
+                                    <h3 className="text-xs font-bold text-teal-600 uppercase mb-3">Power & Battery</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Status</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                value={editForm.specs?.battery_status || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_status: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Health</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                placeholder="e.g. 95%"
+                                                value={editForm.specs?.battery_health || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_health: e.target.value } })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] uppercase text-gray-400 font-bold mb-1">Cycle Count</label>
+                                            <input
+                                                className="w-full px-3 py-2 border border-gray-200 rounded text-sm"
+                                                placeholder="e.g. 45"
+                                                value={editForm.specs?.battery_cycles || ''}
+                                                onChange={e => setEditForm({ ...editForm, specs: { ...editForm.specs, battery_cycles: e.target.value } })}
+                                            />
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={saveChanges}
-                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-colors"
-                                >
-                                    Save Changes
-                                </button>
-                            </div>
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveChanges}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-colors"
+                            >
+                                Save Changes
+                            </button>
                         </div>
                     </div>
-                )
-            }
+                </div>
+    )
+}
         </div >
     );
 }
+
+
+

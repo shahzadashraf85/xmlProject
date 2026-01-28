@@ -7,6 +7,49 @@ export default function InventoryTable() {
     const [items, setItems] = useState<InventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredItems.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredItems.map(i => i.id)));
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    const handleBulkStatusChange = async (newStatus: string) => {
+        if (!confirm(`Are you sure you want to update ${selectedIds.size} items to ${newStatus?.replace('_', ' ')}?`)) return;
+
+        try {
+            const { error } = await supabase
+                .from('inventory_items')
+                .update({ status: newStatus })
+                .in('id', Array.from(selectedIds));
+
+            if (error) throw error;
+
+            // Optimistic update
+            const updatedItems = items.map(i =>
+                selectedIds.has(i.id) ? { ...i, status: newStatus } : i
+            );
+            setItems(updatedItems);
+            setSelectedIds(new Set()); // Clear selection
+            alert('Bulk update successful');
+        } catch (err) {
+            console.error('Bulk update failed:', err);
+            alert('Error updating items');
+        }
+    };
 
     // Universal Filter State
     const [filters, setFilters] = useState({
@@ -145,6 +188,29 @@ export default function InventoryTable() {
                         Back
                     </button>
                 </div>
+
+                {selectedIds.size > 0 && (
+                    <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-2 rounded-full shadow-lg z-50 flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                        <span className="font-bold text-sm">{selectedIds.size} Selected</span>
+                        <div className="h-4 w-px bg-blue-400"></div>
+                        <div className="flex gap-2">
+                            <select
+                                className="bg-blue-700 border-none text-xs rounded px-2 py-1 outline-none text-white cursor-pointer hover:bg-blue-800"
+                                onChange={(e) => {
+                                    if (e.target.value) handleBulkStatusChange(e.target.value);
+                                    e.target.value = '';
+                                }}
+                            >
+                                <option value="">Bulk Change Status...</option>
+                                <option value="pending_triage">Pending Triage</option>
+                                <option value="ready_to_ship">Ready to Ship</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="scrapped">Scrapped</option>
+                            </select>
+                        </div>
+                        <button onClick={() => setSelectedIds(new Set())} className="ml-2 hover:bg-blue-700 p-1 rounded-full">✕</button>
+                    </div>
+                )}
             </div>
 
             {/* Table Area */}
@@ -153,6 +219,14 @@ export default function InventoryTable() {
                     <table className="w-full text-sm text-left border-collapse print:text-xs">
                         <thead className="bg-gray-100 text-gray-700 font-bold sticky top-0 z-10 shadow-sm print:shadow-none print:static print:bg-white print:text-black print:border-b-2 print:border-black">
                             <tr>
+                                <th className="p-3 border-b border-gray-200 w-10 print:hidden text-center">
+                                    <input
+                                        type="checkbox"
+                                        className="rounded border-gray-300"
+                                        checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
                                 <th className="p-3 border-b border-gray-200 w-32 print:border-black print:p-1">
                                     <div className="mb-1">Serial</div>
                                     <input placeholder="Filter..." className="w-full p-1 text-xs border rounded font-normal print:hidden" onChange={e => handleFilterChange('serial', e.target.value)} />
@@ -203,7 +277,15 @@ export default function InventoryTable() {
                         </thead>
                         <tbody className="divide-y divide-gray-100 bg-white">
                             {filteredItems.map(item => (
-                                <tr key={item.id} className="hover:bg-blue-50 transition-colors print:break-inside-avoid">
+                                <tr key={item.id} className={`hover:bg-blue-50 transition-colors print:break-inside-avoid ${selectedIds.has(item.id) ? 'bg-blue-50' : ''}`}>
+                                    <td className="p-3 text-center print:hidden">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.has(item.id)}
+                                            onChange={() => toggleSelect(item.id)}
+                                            className="rounded border-gray-300"
+                                        />
+                                    </td>
                                     <td className="p-3 font-mono text-xs">{item.serial_number}</td>
                                     <td className="p-3">{item.brand}</td>
                                     <td className="p-3 font-medium text-gray-900">{item.model}</td>
