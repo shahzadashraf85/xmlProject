@@ -12,7 +12,6 @@ echo.
 echo Starting PowerShell script...
 echo.
 
-REM Run PowerShell with bypass policy (no admin needed)
-powershell.exe -ExecutionPolicy Bypass -NoExit -File "%~dp0windows-register.ps1"
-
-pause
+REM Run PowerShell directly without triggering security warnings
+REM No admin needed, no execution policy bypass
+powershell.exe -Command "& '%~dp0windows-register.ps1'"

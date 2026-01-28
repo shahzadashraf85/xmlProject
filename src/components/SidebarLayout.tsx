@@ -46,6 +46,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
                 { name: 'Inventory Manager', path: '/inventory', icon: <Package size={20} /> },
                 { name: 'Master Inventory', path: '/inventory-grid', icon: <Grid size={20} /> },
                 { name: 'Parts Management', path: '/parts', icon: <Wrench size={20} /> },
+                { name: 'Messages', path: '/messages', icon: <Mail size={20} /> },
                 { name: 'Label Printer', path: '/label-printer', icon: <Printer size={20} /> },
                 { name: 'Purchase Management', path: '/purchase-management', icon: <ShoppingBag size={20} /> },
             ]

@@ -1,23 +1,38 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Check for Administrator privileges
-net session >nul 2>&1
-if %errorLevel% == 0 (
-    goto :gotAdmin
-) else (
-    echo Requesting administrative privileges...
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    exit /b
-)
-
-:gotAdmin
 cd /d "%~dp0"
 
 echo ========================================
 echo   LapTek Device Auto-Registration
-echo   (Running as Administrator)
 echo ========================================
+echo.
+
+:: ===== INTERNET CONNECTIVITY CHECK =====
+echo Checking internet connection...
+ping -n 1 -w 3000 8.8.8.8 >nul 2>&1
+if errorlevel 1 (
+    echo.
+    echo ========================================
+    echo   NO INTERNET CONNECTION
+    echo ========================================
+    echo.
+    echo Cannot connect to the internet.
+    echo Registration requires internet access.
+    echo.
+    echo Please check your network connection
+    echo and try again.
+    echo.
+    set /p SHUTDOWN_CHOICE="Shutdown PC anyway? (Y/N): "
+    if /I "!SHUTDOWN_CHOICE!"=="Y" (
+        shutdown /s /t 0 /c "No internet - Manual shutdown"
+    )
+    echo.
+    echo Exiting without shutdown.
+    pause
+    exit /b 1
+)
+echo Internet connection OK.
 echo.
 
 echo Detecting hardware specifications...
@@ -35,6 +50,7 @@ set SPECS_OUT=%TEMP%\laptek_specs.txt
 echo $ErrorActionPreference = 'SilentlyContinue' > "%SPECS_SCRIPT%"
 echo $bios = Get-CimInstance Win32_BIOS >> "%SPECS_SCRIPT%"
 echo $cs = Get-CimInstance Win32_ComputerSystem >> "%SPECS_SCRIPT%"
+echo $csp = Get-CimInstance Win32_ComputerSystemProduct >> "%SPECS_SCRIPT%"
 echo $cpu = Get-CimInstance Win32_Processor >> "%SPECS_SCRIPT%"
 echo $disk = Get-CimInstance Win32_DiskDrive ^| Select-Object -First 1 >> "%SPECS_SCRIPT%"
 echo $os = Get-CimInstance Win32_OperatingSystem >> "%SPECS_SCRIPT%"
@@ -44,7 +60,7 @@ echo $mem = Get-CimInstance Win32_PhysicalMemory ^| Select-Object -First 1 >> "%
 echo. >> "%SPECS_SCRIPT%"
 echo "SERIAL=" + $bios.SerialNumber >> "%SPECS_SCRIPT%"
 echo "BRAND=" + $cs.Manufacturer >> "%SPECS_SCRIPT%"
-echo "MODEL=" + $cs.Model >> "%SPECS_SCRIPT%"
+echo if ($cs.Manufacturer -match "Lenovo") { "MODEL=" + $csp.Version } else { "MODEL=" + $cs.Model } >> "%SPECS_SCRIPT%"
 echo "CPU=" + $cpu.Name >> "%SPECS_SCRIPT%"
 echo "CPU_CORES=" + $cpu.NumberOfCores >> "%SPECS_SCRIPT%"
 echo "CPU_THREADS=" + $cpu.NumberOfLogicalProcessors >> "%SPECS_SCRIPT%"
@@ -159,7 +175,51 @@ echo   Status:       %BATTERY_STATUS%
 echo   Health:       %BATTERY_HEALTH%
 echo   Cycles:       %BATTERY_CYCLES%
 echo ========================================
+echo ========================================
 echo.
+
+:: ===== CHECK FOR DUPLICATE SERIAL NUMBER =====
+echo Checking for existing registration...
+echo.
+
+set DUPFILE=%TEMP%\\laptek_dup.txt
+curl -s --connect-timeout 10 --insecure "https://xqsatwytjzvlhdmckfsb.supabase.co/rest/v1/inventory_items?serial_number=eq.%SERIAL%&select=id,brand,model,created_at" ^
+  -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
+  -H "Authorization: Bearer sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" > "%DUPFILE%" 2>&1
+
+:: Check if curl failed (empty file or connection error)
+if not exist "%DUPFILE%" goto :server_error
+for %%A in ("%DUPFILE%") do if %%~zA==0 goto :server_error
+
+:: Check for curl/connection errors in response
+findstr /I /C:"Could not resolve" /C:"Connection refused" /C:"timed out" /C:"Failed to connect" "%DUPFILE%" >nul
+if not errorlevel 1 goto :server_error
+
+:: Check if response contains data (not empty array [])
+findstr /C:"\"id\"" "%DUPFILE%" >nul
+if not errorlevel 1 (
+    echo.
+    echo ========================================
+    echo   DEVICE ALREADY REGISTERED
+    echo ========================================
+    echo.
+    echo This device is already in the inventory system.
+    echo Serial Number: %SERIAL%
+    echo.
+    echo No duplicate entry will be created.
+    echo.
+    set /p SHUTDOWN_DUP="Shutdown PC now? (Y/N): "
+    if /I "!SHUTDOWN_DUP!"=="Y" (
+        shutdown /s /t 0 /c "Laptop already registered - Auto shutdown"
+    )
+    del "%DUPFILE%" 2>nul
+    exit /b 0
+)
+
+echo Serial number is unique. Proceeding with registration...
+echo.
+del "%DUPFILE%" 2>nul
+:: ===== END DUPLICATE CHECK =====
 
 echo.
 echo ========================================
@@ -250,44 +310,101 @@ echo } >> "%REGFILE%"
 echo Uploading to LapTek Inventory System...
 
 :: Register device (Using Anon Key)
-curl -s --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
+curl -s --connect-timeout 15 --insecure -X POST "https://xqsatwytjzvlhdmckfsb.supabase.co/functions/v1/register-device" ^
   -H "apikey: sb_publishable_LbkFFWSkr91XApWL5NJBew_rAIkyI5J" ^
   -H "Content-Type: application/json" ^
-  -d @"%REGFILE%" > "%RESPFILE%"
+  -d @"%REGFILE%" > "%RESPFILE%" 2>&1
 
-:: Check result
-type "%RESPFILE%" | findstr /I /C:"error" /C:"message" /C:"code" >nul
+:: Check if response file exists and has content
+if not exist "%RESPFILE%" goto :upload_failed
+for %%A in ("%RESPFILE%") do if %%~zA==0 goto :upload_failed
+
+:: Check for curl/connection errors in response
+findstr /I /C:"Could not resolve" /C:"Connection refused" /C:"timed out" /C:"Failed to connect" "%RESPFILE%" >nul
+if not errorlevel 1 goto :upload_failed
+
+:: Check for success in response
+type "%RESPFILE%" | findstr /C:"success" >nul
 if not errorlevel 1 (
-    :: Found error keywords, but check if it's a success message with "message"
-    type "%RESPFILE%" | findstr /C:"success" >nul
-    if not errorlevel 1 (
-        goto :success
-    )
+    goto :success
+)
+
+:: Check for error keywords
+type "%RESPFILE%" | findstr /I /C:"error" /C:"code" >nul
+if not errorlevel 1 (
     echo.
     echo ========================================
     echo   REGISTRATION FAILED
     echo ========================================
+    echo.
+    echo Server response:
     type "%RESPFILE%"
-) else (
-    :success
     echo.
-    echo ========================================
-    echo   REGISTRATION SUCCESSFUL!
-    echo ========================================
-    echo.
-    echo Device has been added to inventory.
-    echo Serial Number: %SERIAL%
-    echo.
-    echo Opening web dashboard...
-    start "" "https://xmlproject.vercel.app/inventory?search=%SERIAL%"
+    goto :ask_shutdown_failed
 )
 
-:: Cleanup
+:: If we got here with content but no clear success/error, assume success
+goto :success
+
+:server_error
+echo.
+echo ========================================
+echo   SERVER CONNECTION ERROR
+echo ========================================
+echo.
+echo Could not connect to the LapTek server.
+echo The duplicate check could not be performed.
+echo.
+echo DATA WAS NOT UPLOADED!
+echo.
+goto :ask_shutdown_failed
+
+:upload_failed
+echo.
+echo ========================================
+echo   DATA UPLOAD FAILED
+echo ========================================
+echo.
+echo Could not upload device data to the server.
+echo Please check your internet connection.
+echo.
+echo DATA WAS NOT SAVED!
+echo.
+goto :ask_shutdown_failed
+
+:ask_shutdown_failed
+set /p SHUTDOWN_FAILED="Shutdown PC anyway? (Y/N): "
+if /I "!SHUTDOWN_FAILED!"=="Y" (
+    shutdown /s /t 0 /c "Registration failed - Manual shutdown"
+)
+echo.
+echo Exiting without shutdown. Please try again later.
+goto :cleanup
+
+:success
+echo.
+echo ========================================
+echo   REGISTRATION SUCCESSFUL!
+echo ========================================
+echo.
+echo Device has been added to inventory.
+echo Serial Number: %SERIAL%
+echo.
+set /p SHUTDOWN_SUCCESS="Shutdown PC now? (Y/N) [Default: Y]: "
+if "%SHUTDOWN_SUCCESS%"=="" set SHUTDOWN_SUCCESS=Y
+if /I "!SHUTDOWN_SUCCESS!"=="Y" (
+    shutdown /s /t 0 /c "Laptop registration complete - Auto shutdown"
+)
+goto :cleanup
+
+:cleanup
+:: Cleanup temp files
 del "%AUTHFILE%" 2>nul
 del "%REGFILE%" 2>nul
 del "%RESPFILE%" 2>nul
 del "%SPECS_SCRIPT%" 2>nul
 del "%SPECS_OUT%" 2>nul
+del "%DUPFILE%" 2>nul
 
 echo.
 pause

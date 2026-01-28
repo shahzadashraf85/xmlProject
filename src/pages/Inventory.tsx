@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 // Icons
 import {
     Package, Download, Search, Activity,
-    Cpu, HardDrive, PenTool, Trash2
+    Cpu, HardDrive, PenTool, Trash2, Printer
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -147,6 +147,192 @@ export default function Inventory() {
             setSelectedItem(null);
         } catch (err) {
             alert('Error deleting item');
+        }
+    }
+
+    function handlePrintLabel(item: InventoryItem) {
+        // Use the actual database field for touch screen
+        const isTouch = item.specs?.is_touch_screen === true;
+
+        // Build label HTML for popup printing
+        const labelHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Print Label - ${item.serial_number}</title>
+    <style>
+        @page {
+            size: 9.5cm 4.5cm;
+            margin: 0;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            width: 9.4cm;
+            height: 4.4cm;
+            padding: 2mm;
+            background: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #888;
+            padding-bottom: 2mm;
+            margin-bottom: 1mm;
+            height: 0.9cm;
+        }
+        .brand {
+            font-size: 11pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            align-self: flex-end;
+        }
+        .model-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .model {
+            font-size: 11pt;
+            font-weight: 600;
+            font-family: monospace;
+        }
+        .touch-badge {
+            font-size: 7pt;
+            font-weight: 900;
+            border: 1px solid black;
+            padding: 0 3px;
+            border-radius: 2px;
+            margin-top: 1mm;
+        }
+        .specs {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1mm;
+        }
+        .processor {
+            text-align: center;
+            font-size: 10pt;
+            font-weight: 600;
+            background: #f9fafb;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 1mm 2mm;
+            width: fit-content;
+            margin: 0 auto;
+        }
+        .ram-ssd {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 10pt;
+        }
+        .ram-ssd span {
+            font-size: 8pt;
+            color: #666;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .comment {
+            text-align: center;
+            font-size: 8pt;
+            font-style: italic;
+            color: #666;
+            font-family: serif;
+        }
+        .footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #eee;
+            padding-top: 1mm;
+            height: 1.3cm;
+        }
+        .grade {
+            width: 28px;
+            height: 28px;
+            border: 2px solid black;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20pt;
+            font-weight: 900;
+        }
+        .barcode {
+            flex-grow: 1;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .barcode svg {
+            height: 40px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">${item.brand || 'BRAND'}</div>
+        <div class="model-section">
+            <div class="model">${item.model || 'MODEL'}</div>
+            ${isTouch ? '<div class="touch-badge">TOUCH</div>' : ''}
+        </div>
+    </div>
+    <div class="specs">
+        <div class="processor">${item.specs?.processor || 'Processor'}</div>
+        <div class="ram-ssd">
+            <div><span>RAM</span> ${item.specs?.ram_gb ? item.specs.ram_gb + 'GB' : '-'}</div>
+            <div><span>SSD</span> ${item.specs?.storage_gb ? item.specs.storage_gb + 'GB' : '-'}</div>
+        </div>
+        ${item.comments ? `<div class="comment">"${item.comments}"</div>` : ''}
+    </div>
+    <div class="footer">
+        <div class="grade">${item.grade || 'B'}</div>
+        <div class="barcode">
+            <svg id="barcode"></svg>
+        </div>
+    </div>
+    <script>
+        JsBarcode("#barcode", "${item.serial_number || 'NOSERIAL'}", {
+            width: 2.2,
+            height: 40,
+            fontSize: 11,
+            margin: 0,
+            textMargin: 2,
+            displayValue: true,
+            font: "monospace"
+        });
+        // Auto print after barcode renders
+        setTimeout(function() {
+            window.print();
+            // Close window after print dialog closes
+            window.onafterprint = function() { window.close(); };
+            // Fallback: close after 3 seconds if onafterprint doesn't fire
+            setTimeout(function() { window.close(); }, 3000);
+        }, 500);
+    </script>
+</body>
+</html>`;
+
+        // Open popup and write the label
+        const printWindow = window.open('', '_blank', 'width=400,height=250');
+        if (printWindow) {
+            printWindow.document.write(labelHTML);
+            printWindow.document.close();
         }
     }
 
@@ -400,6 +586,9 @@ export default function Inventory() {
                                 </div>
 
                                 <div className="flex gap-2 flex-shrink-0">
+                                    <Button variant="outline" size="sm" onClick={() => handlePrintLabel(selectedItem)}>
+                                        <Printer className="mr-2 h-3 w-3" /> Print Label
+                                    </Button>
                                     <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                                         <PenTool className="mr-2 h-3 w-3" /> Edit
                                     </Button>
